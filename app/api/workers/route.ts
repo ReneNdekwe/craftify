@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('workers')
-      .select('*, categories(name, icon)')
+      .select('*, categories(name, icon), kyc:worker_kyc(*)')
       .order('name', { ascending: true });
 
     if (status) {

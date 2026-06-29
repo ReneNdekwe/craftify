@@ -44,6 +44,9 @@ export async function GET(request: NextRequest) {
       query = query.eq('customer_id', customerId);
     } else if (workerId) {
       query = query.or(`status.eq.OPEN,worker_id.eq.${workerId}`);
+    } else {
+      // Public guest mode: ONLY OPEN jobs
+      query = query.eq('status', 'OPEN');
     }
 
     const { data: jobs, error } = await query;
@@ -52,7 +55,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch jobs' }, { status: 500 });
     }
 
-    return NextResponse.json({ jobs: jobs || [] });
+    // Redact sensitive data if unauthenticated
+    const isPublic = !customerId && !workerId;
+    const sanitizedJobs = (jobs || []).map((job: any) => {
+      if (isPublic) {
+        // Redact exact address (keep just city/postal if possible, or generic string)
+        const addressParts = job.address ? job.address.split(',') : [];
+        const maskedAddress = addressParts.length > 1 ? addressParts[addressParts.length - 1].trim() : 'Local Area';
+        
+        return {
+          ...job,
+          address: maskedAddress,
+          customers: null, // completely hide customer details
+        };
+      }
+      return job;
+    });
+
+    return NextResponse.json({ jobs: sanitizedJobs });
   } catch (error) {
     console.error('Jobs API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

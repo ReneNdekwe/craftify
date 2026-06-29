@@ -4,9 +4,9 @@ import { AuthProvider } from "@/lib/auth-context";
 import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
-  title: "Craftify Emergency — Instant Emergency Repair Services",
-  description: "Get emergency plumbers, electricians, locksmiths, and more dispatched to your location within minutes. 24/7 availability with real-time tracking.",
-  keywords: "emergency repair, plumber, electrician, locksmith, HVAC, emergency services, home repair",
+  title: "Craftify — On-Demand Professional Home Repairs",
+  description: "Get plumbers, electricians, locksmiths, and more dispatched to your location within minutes. 24/7 availability with transparent pricing and real-time tracking.",
+  keywords: "home repair, plumber, electrician, locksmith, handyman, on-demand services, home maintenance",
 };
 
 export default function RootLayout({

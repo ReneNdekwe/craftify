@@ -8,21 +8,45 @@
 /* ── CSS Variables / Design Tokens ─────────────────────────── */
 
 :root {
-  /* Primary Blue Palette */
-  --blue-50: #eff6ff;
-  --blue-100: #dbeafe;
-  --blue-200: #bfdbfe;
-  --blue-300: #93c5fd;
-  --blue-400: #60a5fa;
-  --blue-500: #3b82f6;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
-  --blue-800: #1e40af;
-  --blue-900: #1e3a8a;
+  /* Trust Anchor Palette (Navy) */
+  --navy-50: #f0f4f8;
+  --navy-100: #d9e2ec;
+  --navy-200: #bcccdc;
+  --navy-300: #9cb3c9;
+  --navy-400: #829ab1;
+  --navy-500: #627d98;
+  --navy-600: #1E3A5F;
+  --navy-700: #1A2B4A;
+  --navy-800: #102a43;
+  --navy-900: #0a192f;
+
+  /* Action Palette (Safety Orange) */
+  --orange-50: #fff3e0;
+  --orange-100: #ffe0b2;
+  --orange-200: #ffcc80;
+  --orange-300: #ffb74d;
+  --orange-400: #ffa726;
+  --orange-500: #ff9800;
+  --orange-600: #FF6B00;
+  --orange-700: #e65100;
+  --orange-800: #bf360c;
+  --orange-900: #3e2723;
+
+  /* Legacy Blue mapping (so existing components don't break, mapped to Navy) */
+  --blue-50: var(--navy-50);
+  --blue-100: var(--navy-100);
+  --blue-200: var(--navy-200);
+  --blue-300: var(--navy-300);
+  --blue-400: var(--navy-400);
+  --blue-500: var(--navy-500);
+  --blue-600: var(--navy-600);
+  --blue-700: var(--navy-700);
+  --blue-800: var(--navy-800);
+  --blue-900: var(--navy-900);
 
   /* Surfaces */
   --white: #ffffff;
-  --gray-50: #f8fafc;
+  --gray-50: #FAFAF8; /* Warm White / Off-White */
   --gray-100: #f1f5f9;
   --gray-200: #e2e8f0;
   --gray-300: #cbd5e1;
@@ -31,15 +55,19 @@
   --gray-600: #475569;
   --gray-700: #334155;
   --gray-800: #1e293b;
-  --gray-900: #0f172a;
+  --gray-900: #111827; /* Near-black readability */
 
   /* Semantic */
-  --color-primary: var(--blue-600);
-  --color-primary-light: var(--blue-500);
-  --color-primary-dark: var(--blue-700);
-  --color-primary-hover: var(--blue-700);
-  --color-primary-bg: var(--blue-50);
-  --color-primary-border: var(--blue-200);
+  --color-primary: var(--navy-600);
+  --color-primary-light: var(--navy-500);
+  --color-primary-dark: var(--navy-700);
+  --color-primary-hover: var(--navy-700);
+  --color-primary-bg: var(--navy-50);
+  --color-primary-border: var(--navy-200);
+
+  --color-accent: var(--orange-600);
+  --color-accent-hover: var(--orange-700);
+  --color-accent-dark: var(--orange-800);
 
   --color-success: #059669;
   --color-success-light: #d1fae5;
@@ -61,7 +89,7 @@
   --color-text-muted: var(--gray-300);
   --color-border: var(--gray-200);
   --color-border-hover: var(--gray-300);
-  --color-border-focus: var(--blue-500);
+  --color-border-focus: var(--orange-500);
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -287,15 +315,15 @@ a:hover {
 }
 
 .btn-primary {
-  background: var(--color-primary);
+  background: var(--color-accent);
   color: var(--white);
-  box-shadow: var(--shadow-blue);
+  box-shadow: 0 4px 14px rgba(232, 80, 10, 0.2);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  box-shadow: var(--shadow-blue-lg);
+  background: var(--color-accent-hover);
   transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(232, 80, 10, 0.3);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -1829,11 +1857,11 @@ a:hover {
 .cta-banner {
   max-width: 1000px;
   margin: 0 auto;
-  background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-500) 50%, var(--blue-400) 100%);
+  background: linear-gradient(135deg, var(--orange-600) 0%, var(--orange-700) 50%, var(--orange-800) 100%);
   border-radius: var(--radius-2xl);
   padding: var(--space-16) var(--space-10);
   text-align: center;
-  box-shadow: var(--shadow-blue-lg);
+  box-shadow: 0 8px 24px rgba(232, 80, 10, 0.25);
 }
 
 .cta-banner-content h2 {
@@ -3083,4 +3111,99 @@ a:hover {
   .dash-page {
     padding: var(--space-4) var(--space-4);
   }
+}
+
+/* ── Premium Redesign Utilities ──────────────────────────────── */
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+
+.gradient-text-alt {
+  background: linear-gradient(135deg, var(--blue-600) 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hover-lift {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 16px 32px rgba(37, 99, 235, 0.12);
+  border-color: var(--blue-300);
+}
+
+.animated-bg {
+  background: linear-gradient(120deg, var(--blue-50) 0%, #f3e8ff 50%, var(--blue-50) 100%);
+  background-size: 200% 200%;
+  animation: gradientBG 8s ease infinite;
+}
+
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── KYC Badge & Checklist ─────────────────────────────────── */
+
+.kyc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.kyc-badge--verified {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.kyc-badge--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.kyc-badge--rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.kyc-checklist {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-200);
+}
+
+.kyc-check-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  font-weight: 500;
+}
+
+.kyc-check-item--done {
+  color: #15803d;
+}
+
+.kyc-check-icon {
+  font-size: 0.85rem;
+  font-weight: 800;
 }

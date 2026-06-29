@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createServerClient } from '@/lib/supabase';
-import { calculateFees } from '@/lib/fees';
 import { v4 as uuidv4 } from 'uuid';
+import { notifyWorkersOfJob } from '@/lib/notifications';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2026-05-27.dahlia',
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       address,
       latitude,
       longitude,
-      price,
+      estimatedPrice,
       severity,
     } = metadata;
 
@@ -69,15 +69,17 @@ export async function POST(request: NextRequest) {
       customerId = newCustomer.id;
     }
 
-    // Step 2: Calculate fees
-    const fees = calculateFees(parseFloat(price));
-
-    // Step 3: Create job record (This triggers the n8n webhook because status is OPEN)
+    // Step 2: Append estimated price to description
     const acceptToken = uuidv4();
-    const finalDescription = severity && severity !== 'MEDIUM' 
+    let finalDescription = severity && severity !== 'MEDIUM' 
       ? `[SEVERITY: ${severity}] ${description}` 
       : description;
+      
+    if (estimatedPrice && estimatedPrice !== '0') {
+      finalDescription += `\n\n[ESTIMATED LABOR: €${estimatedPrice} - Collect directly from customer]`;
+    }
 
+    // Step 3: Create job record (This triggers the n8n webhook because status is OPEN)
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .insert({
@@ -87,10 +89,10 @@ export async function POST(request: NextRequest) {
         address,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
-        base_price: fees.totalPrice,
-        current_price: fees.totalPrice,
-        platform_fee: fees.platformFee,
-        worker_payout: fees.workerPayout,
+        base_price: 19.00, // Fixed dispatch fee
+        current_price: 19.00,
+        platform_fee: 19.00,
+        worker_payout: 0.00,
         status: 'OPEN',
         accept_token: acceptToken,
         stripe_payment_intent_id: session.payment_intent as string,
@@ -105,14 +107,22 @@ export async function POST(request: NextRequest) {
 
     // Step 4: Dispatch job to n8n webhook
     try {
-      const { data: workers } = await supabase.rpc('find_nearby_workers', {
-        p_latitude: parseFloat(latitude),
-        p_longitude: parseFloat(longitude),
-        p_radius_km: 25.0, // Expand radius to ensure we find workers
-        p_category_id: categoryId
-      });
+      const { data: workers } = await supabase
+        .from('workers')
+        .select('*')
+        .eq('status', 'ACTIVE');
 
       if (workers && workers.length > 0) {
+        // Native Notification
+        // Get category name for notifications
+        const { data: category } = await supabase
+          .from('categories')
+          .select('name')
+          .eq('id', categoryId)
+          .single();
+        const categoryName = category?.name || 'Emergency';
+        await notifyWorkersOfJob(job, workers, categoryName).catch(err => console.error('Native notification failed:', err));
+
         // Fire-and-forget webhook
         const webhookUrl = process.env.N8N_WEBHOOK_URL || 'https://rndekwe.app.n8n.cloud';
         fetch(`${webhookUrl}/webhook/dispatch-job`, {

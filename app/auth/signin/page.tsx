@@ -139,21 +139,6 @@ export default function SignInPage() {
             </button>
           </form>
 
-          {/* Demo accounts */}
-          <div className="auth-demo-section">
-            <p className="auth-demo-label">Quick demo login</p>
-            <div className="auth-demo-buttons">
-              <button className="btn btn-ghost btn-sm" onClick={() => fillDemo('customer')}>
-                Customer
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => fillDemo('worker')}>
-                Worker
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => fillDemo('admin')}>
-                Admin
-              </button>
-            </div>
-          </div>
 
           <div className="auth-switch">
             Don&apos;t have an account?{' '}

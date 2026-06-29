@@ -36,39 +36,6 @@ export default function HomePage() {
     },
   ];
 
-  const trustBadges = [
-    {
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <circle cx="10" cy="10" r="9" stroke="var(--blue-400)" strokeWidth="1.5"/>
-          <path d="M10 5v5l3 2" stroke="var(--blue-400)" strokeWidth="1.5" strokeLinecap="round"/>
-        </svg>
-      ),
-      title: 'Under 30 min',
-      desc: 'Average response time',
-    },
-    {
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <circle cx="10" cy="10" r="9" stroke="var(--blue-400)" strokeWidth="1.5"/>
-          <path d="M7 10l2 2 4-4" stroke="var(--blue-400)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      title: 'Verified Pros',
-      desc: 'KYC checked workers',
-    },
-    {
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <circle cx="10" cy="10" r="9" stroke="var(--blue-400)" strokeWidth="1.5"/>
-          <path d="M8 12l2-4 2 4M9 11h2" stroke="var(--blue-400)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      ),
-      title: 'Fair Pricing',
-      desc: 'Dynamic & transparent',
-    },
-  ];
-
   return (
     <>
       {/* Hero */}
@@ -81,13 +48,13 @@ export default function HomePage() {
             </div>
 
             <h1 className="hero-title">
-              Emergency trades,<br />
-              <span className="gradient-text">at your door.</span>
+              Reliable local pros,<br />
+              <span className="gradient-text">right at your door.</span>
             </h1>
 
             <p className="hero-desc">
-              Burst pipe? Power out? Locked out? Connect instantly with
-              verified Handwerker near you. Dynamic pricing, no hidden fees.
+              From sudden leaks to electrical fixes, connect instantly with
+              verified local handymen. Transparent €19 booking fee, labor paid at the door.
             </p>
 
             <div className="hero-actions">
@@ -95,9 +62,9 @@ export default function HomePage() {
                 href={user ? '/request' : '/auth/signup'}
                 className="btn btn-primary btn-lg hero-cta-primary"
               >
-                Post an Emergency
+                Request a Pro Now
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M4 9h10M10 5l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M4 9h10M10 5l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </a>
               <a
@@ -105,7 +72,7 @@ export default function HomePage() {
                 className="btn btn-ghost btn-lg hero-cta-secondary"
               >
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                  <path d="M11.5 2.5l4 4-9.5 9.5H2v-4L11.5 2.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M11.5 2.5l4 4-9.5 9.5H2v-4L11.5 2.5z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 Join as Worker
               </a>
@@ -142,18 +109,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Trust Badges */}
-        <div className="trust-badges">
-          {trustBadges.map((badge) => (
-            <div key={badge.title} className="trust-badge">
-              <div className="trust-badge-icon">{badge.icon}</div>
-              <div>
-                <div className="trust-badge-title">{badge.title}</div>
-                <div className="trust-badge-desc">{badge.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+
       </section>
 
       {/* Categories */}
@@ -176,7 +132,7 @@ export default function HomePage() {
                   <p>{cat.desc}</p>
                 </div>
                 <svg className="category-card-arrow" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M7 4l6 6-6 6" stroke="var(--gray-400)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M7 4l6 6-6 6" stroke="var(--gray-400)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </a>
             ))}
@@ -196,8 +152,8 @@ export default function HomePage() {
             <div className="timeline-step">
               <div className="timeline-step-num">1</div>
               <div className="timeline-step-connector"></div>
-              <h3>Post your emergency</h3>
-              <p>Describe the problem, set your location, and choose a starting price.</p>
+              <h3>Request a repair</h3>
+              <p>Describe your issue, set your location, and review the transparent labor estimate.</p>
             </div>
             <div className="timeline-step">
               <div className="timeline-step-num">2</div>
@@ -207,8 +163,8 @@ export default function HomePage() {
             </div>
             <div className="timeline-step">
               <div className="timeline-step-num">3</div>
-              <h3>Job done, get paid</h3>
-              <p>Once complete, payment is processed securely through Stripe. Simple.</p>
+              <h3>Job done, pay directly</h3>
+              <p>Pay the small dispatch fee online, and pay the worker directly once the job is successfully done.</p>
             </div>
           </div>
         </div>
@@ -260,7 +216,7 @@ export default function HomePage() {
               <span className="navbar-brand-icon" style={{ width: '32px', height: '32px', fontSize: '1rem' }}>⚡</span>
               <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--gray-900)' }}>Craftify</span>
             </div>
-            <p>Emergency repair services dispatched in minutes. Available 24/7 across your city.</p>
+            <p>Professional home repair services dispatched in minutes. Available 24/7 across your city.</p>
           </div>
 
           <div className="footer-v2-links">
@@ -286,7 +242,7 @@ export default function HomePage() {
         </div>
 
         <div className="footer-v2-bottom">
-          <p>© 2026 Craftify Emergency. All rights reserved.</p>
+          <p>© 2026 Craftify. All rights reserved.</p>
           <p>Built with Next.js · Supabase · Stripe Connect</p>
         </div>
       </footer>

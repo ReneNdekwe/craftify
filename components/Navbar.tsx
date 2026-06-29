@@ -19,6 +19,13 @@ export default function Navbar() {
         </a>
 
         <div className="navbar-links">
+          <a href="/about" className={`navbar-link${pathname === '/about' ? ' active' : ''}`}>
+            About Us
+          </a>
+          <a href="/careers" className={`navbar-link${pathname === '/careers' ? ' active' : ''}`}>
+            Careers
+          </a>
+
           {loading ? null : user ? (
             <>
               {/* Role-based navigation */}
@@ -67,7 +74,10 @@ export default function Navbar() {
           ) : (
             <>
               {/* Signed out state */}
-              <a href="/auth/signin" className="btn btn-ghost btn-sm">
+              <a href="/dashboard" className={`navbar-link${pathname === '/dashboard' ? ' active' : ''}`}>
+                Available Jobs
+              </a>
+              <a href="/auth/signin" className="btn btn-ghost btn-sm" style={{ marginLeft: 'var(--space-2)' }}>
                 Sign In
               </a>
               <a href="/auth/signup" className="btn btn-primary btn-sm">

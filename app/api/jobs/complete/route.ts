@@ -12,7 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { createPaymentIntent, eurToCents } from '@/lib/stripe';
+import { sendPaymentReceipts } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,47 +75,13 @@ export async function POST(request: NextRequest) {
       .eq('id', job.category_id)
       .single();
 
-    // Step 3: Create Stripe PaymentIntent
-    let paymentIntentId: string | null = null;
-    let transferId: string | null = null;
-
-    try {
-      if (process.env.STRIPE_SECRET_KEY && worker.stripe_account_id) {
-        const paymentIntent = await createPaymentIntent(
-          eurToCents(job.current_price),
-          eurToCents(job.platform_fee),
-          worker.stripe_account_id,
-          {
-            job_id: job.id,
-            customer_id: job.customer_id,
-            worker_id: workerId,
-          }
-        );
-        paymentIntentId = paymentIntent.id;
-        transferId = paymentIntent.transfer_data?.destination as string || null;
-
-        console.log(`💳 Payment processed: ${paymentIntentId}`);
-      } else {
-        console.log(`💳 Stripe not configured or worker has no Stripe account — simulating payment`);
-        paymentIntentId = `sim_${Date.now()}`;
-        transferId = `sim_transfer_${Date.now()}`;
-      }
-    } catch (stripeError) {
-      console.error('Stripe payment error:', stripeError);
-      // Continue with simulated payment for demo purposes
-      paymentIntentId = `sim_error_${Date.now()}`;
-      transferId = `sim_transfer_error_${Date.now()}`;
-    }
-
-    // Step 4: Update job to PAID
+    // Step 3: Update job to PAID
     const { data: updatedJob, error: updateError } = await supabase
       .from('jobs')
       .update({
         status: 'PAID',
         completed_at: new Date().toISOString(),
         paid_at: new Date().toISOString(),
-        stripe_payment_intent_id: paymentIntentId,
-        stripe_transfer_id: transferId,
       })
       .eq('id', jobId)
       .select('*')
@@ -126,20 +92,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update job status' }, { status: 500 });
     }
 
-    // Step 5: Send payment receipts (Delegated to n8n)
+    // Step 4: Send notifications (Native fallback)
+    await sendPaymentReceipts(updatedJob, customer, worker, category?.name || 'Emergency')
+      .catch(err => console.error('Native notification failed:', err));
+
+    // Note: The n8n 'payment_receipts' workflow is automatically triggered 
+    // by the Supabase database webhook (on UPDATE) when status changes to PAID.
 
     return NextResponse.json({
       success: true,
-      message: 'Job completed and payment processed!',
+      message: 'Job completed! Worker collects payment at the door.',
       job: {
         id: updatedJob.id,
         status: updatedJob.status,
-        totalPaid: updatedJob.current_price,
-        platformFee: updatedJob.platform_fee,
-        workerPayout: updatedJob.worker_payout,
-        paymentIntentId: updatedJob.stripe_payment_intent_id,
         completedAt: updatedJob.completed_at,
-        paidAt: updatedJob.paid_at,
       },
     });
   } catch (error) {

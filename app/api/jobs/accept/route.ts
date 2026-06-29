@@ -14,6 +14,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { capturePaymentIntent } from '@/lib/stripe';
+import { notifyCustomerJobAccepted } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -104,7 +106,23 @@ export async function POST(request: NextRequest) {
       .eq('id', job.category_id)
       .single();
 
-    // Step 5: Notify customer with worker details (Delegated to n8n)
+    // Step 5: Capture the Dispatch Fee
+    if (job.stripe_payment_intent_id) {
+      try {
+        await capturePaymentIntent(job.stripe_payment_intent_id);
+        console.log(`Successfully captured dispatch fee for job ${job.id}`);
+      } catch (stripeError) {
+        console.error('Failed to capture payment intent:', stripeError);
+        // We log the error but don't fail the request, the worker is already assigned.
+        // We can manually capture later or build a retry mechanism.
+      }
+    }
+
+    // Step 6: Notify customer with worker details (Native fallback)
+    await notifyCustomerJobAccepted(updatedJob, customer, worker, category?.name || 'Emergency').catch(err => console.error('Native notification failed:', err));
+    
+    // Note: The n8n 'job_acceptance' workflow is automatically triggered 
+    // by the Supabase database webhook (on UPDATE) when status changes to ACCEPTED.
 
     // Update worker stats
     await supabase

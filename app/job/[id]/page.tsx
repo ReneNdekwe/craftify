@@ -263,36 +263,18 @@ export default function JobStatusPage({
               </div>
               <div className="dash-detail-card-body">
                 <div className="dash-detail-row">
-                  <span className="dash-detail-label">Starting Price</span>
-                  <span className="dash-detail-value">€{Number(job.base_price).toFixed(2)}</span>
-                </div>
-                <div className="dash-detail-row">
-                  <span className="dash-detail-label">Current Price</span>
+                  <span className="dash-detail-label">Dispatch Fee Paid</span>
                   <span className="dash-detail-value" style={{
                     fontSize: 'var(--fs-xl)',
                     fontWeight: 800,
-                    color: job.current_price > job.base_price ? 'var(--blue-600)' : 'var(--gray-800)',
+                    color: 'var(--blue-600)',
                   }}>
-                    €{Number(job.current_price).toFixed(2)}
+                    €{Number(job.base_price).toFixed(2)}
                   </span>
                 </div>
-                <div className="dash-detail-row">
-                  <span className="dash-detail-label">Platform Fee (20%)</span>
-                  <span className="dash-price dash-price--primary">
-                    €{Number(job.platform_fee).toFixed(2)}
-                  </span>
+                <div className="dash-escalation-banner" style={{ background: '#f8fafc', color: '#475569', borderLeftColor: '#cbd5e1' }}>
+                  <p>💸 Labor and materials must be paid directly to the handworker at the door.</p>
                 </div>
-                <div className="dash-detail-row">
-                  <span className="dash-detail-label">Worker Payout (80%)</span>
-                  <span className="dash-price dash-price--success" style={{ fontSize: 'var(--fs-base)' }}>
-                    €{Number(job.worker_payout).toFixed(2)}
-                  </span>
-                </div>
-                {job.escalation_count > 0 && (
-                  <div className="dash-escalation-banner">
-                    <p>⚡ Price escalated {job.escalation_count}× (+€{job.escalation_count * 75} from base)</p>
-                  </div>
-                )}
               </div>
             </div>
 

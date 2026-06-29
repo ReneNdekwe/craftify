@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { price, description, customerName, customerEmail, customerPhone, categoryId, address, latitude, longitude, severity } = body;
 
-    if (!price || !description) {
+    if (!description) {
       return NextResponse.json({ error: 'Missing required payment info' }, { status: 400 });
     }
 
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    const unitAmount = Math.round(parseFloat(price) * 100);
+    const unitAmount = 1900; // €19.00 fixed dispatch fee
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     // Create Checkout Session and embed form data in metadata
@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: 'eur',
             product_data: {
-              name: 'Emergency Repair Request',
-              description: description.substring(0, 255), // Stripe desc limit
+              name: 'Emergency Dispatch Fee',
+              description: 'Labor and materials are paid directly to the handworker at the door.',
             },
             unit_amount: unitAmount,
           },
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         address: address || '',
         latitude: latitude ? String(latitude) : '',
         longitude: longitude ? String(longitude) : '',
-        price: price ? String(price) : '0',
+        estimatedPrice: price ? String(price) : '0',
         severity: severity || 'MEDIUM',
       },
       success_url: `${appUrl}/request/success?session_id={CHECKOUT_SESSION_ID}`,

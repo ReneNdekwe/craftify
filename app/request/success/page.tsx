@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function RequestSuccessPage() {
+function RequestSuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
 
@@ -87,7 +87,7 @@ export default function RequestSuccessPage() {
           <div className="accept-card">
             <div className="accept-header" style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}>
               <h1>Payment Secured!</h1>
-              <p>Your emergency request has been dispatched</p>
+              <p>Your repair request has been dispatched</p>
             </div>
             <div className="accept-body">
               <div className="accept-detail-row">
@@ -104,7 +104,7 @@ export default function RequestSuccessPage() {
                 {result.message}
               </p>
               <p style={{ marginTop: 'var(--space-2)', fontSize: 'var(--fs-xs)', color: 'var(--gray-400)' }}>
-                Your payment method has been pre-authorized. You will only be charged when the worker completes the job.
+                The €19 dispatch booking fee is pre-authorized and will only be captured when a worker accepts your request. Labor fees are settled directly at the door.
               </p>
             </div>
             <div className="accept-actions" style={{ display: 'flex', gap: 'var(--space-4)' }}>
@@ -122,4 +122,19 @@ export default function RequestSuccessPage() {
   }
 
   return null;
+}
+
+export default function RequestSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="page-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner" style={{ width: '40px', height: '40px', borderWidth: '4px', margin: '0 auto var(--space-4)' }}></div>
+          <h2>Loading...</h2>
+        </div>
+      </div>
+    }>
+      <RequestSuccessContent />
+    </Suspense>
+  );
 }

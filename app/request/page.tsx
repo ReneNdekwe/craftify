@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { useAuth } from '@/lib/auth-context';
 
 interface Category {
   id: string;
@@ -11,6 +12,7 @@ interface Category {
 }
 
 export default function RequestPage() {
+  const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -36,6 +38,17 @@ export default function RequestPage() {
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        customerName: user.name || prev.customerName,
+        customerEmail: user.email || prev.customerEmail,
+        customerPhone: user.phone || prev.customerPhone,
+      }));
+    }
+  }, [user]);
 
   async function fetchCategories() {
     try {
@@ -190,10 +203,10 @@ export default function RequestPage() {
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
         <div className="text-center mb-8">
           <h1 style={{ fontSize: 'var(--fs-3xl)' }}>
-            Emergency Request
+            Request a Pro
           </h1>
           <p className="mt-2">
-            Describe your emergency and we&apos;ll dispatch the nearest available professional.
+            Describe your repair needs and we&apos;ll dispatch the nearest available professional.
           </p>
         </div>
 
@@ -205,7 +218,12 @@ export default function RequestPage() {
           )}
 
           {/* Contact Info */}
-          <h3 className="mb-4" style={{ fontSize: 'var(--fs-lg)' }}>Your Details</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+            <h3 style={{ fontSize: 'var(--fs-lg)', margin: 0 }}>Your Details</h3>
+            {user && (
+              <span className="badge badge-success">Logged in as {user.name}</span>
+            )}
+          </div>
 
           <div className="grid-2">
             <div className="form-group">
@@ -219,6 +237,8 @@ export default function RequestPage() {
                 value={formData.customerName}
                 onChange={handleChange}
                 required
+                readOnly={!!user}
+                style={{ opacity: user ? 0.8 : 1, backgroundColor: user ? 'var(--gray-50)' : 'white' }}
               />
             </div>
             <div className="form-group">
@@ -232,6 +252,8 @@ export default function RequestPage() {
                 value={formData.customerPhone}
                 onChange={handleChange}
                 required
+                readOnly={!!user}
+                style={{ opacity: user ? 0.8 : 1, backgroundColor: user ? 'var(--gray-50)' : 'white' }}
               />
             </div>
           </div>
@@ -247,14 +269,16 @@ export default function RequestPage() {
               value={formData.customerEmail}
               onChange={handleChange}
               required
+              readOnly={!!user}
+              style={{ opacity: user ? 0.8 : 1, backgroundColor: user ? 'var(--gray-50)' : 'white' }}
             />
           </div>
 
-          {/* Emergency Details */}
-          <h3 className="mb-4 mt-6" style={{ fontSize: 'var(--fs-lg)' }}>Emergency Details</h3>
+          {/* Repair Details */}
+          <h3 className="mb-4 mt-6" style={{ fontSize: 'var(--fs-lg)' }}>Repair Details</h3>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="description">What&apos;s the emergency?</label>
+            <label className="form-label" htmlFor="description">What&apos;s the issue?</label>
             <textarea
               id="description"
               name="description"
@@ -344,56 +368,49 @@ export default function RequestPage() {
             </button>
           </div>
 
-          {/* Price */}
-          <h3 className="mb-4 mt-6" style={{ fontSize: 'var(--fs-lg)' }}>Starting Price</h3>
+          {/* Pricing Details */}
+          <h3 className="mb-4 mt-6" style={{ fontSize: 'var(--fs-lg)' }}>Pricing Details</h3>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="price">Offered Price (€)</label>
-            <input
-              id="price"
-              name="price"
-              type="number"
-              className="form-input"
-              placeholder="150"
-              min="50"
-              max="2000"
-              step="0.01"
-              value={formData.price}
-              onChange={handleChange}
-              required
-            />
-            <p className="form-hint">
-              Minimum €50. If no worker accepts, the price increases by €75 every 5 minutes (max €900).
-            </p>
-          </div>
-
-          {/* Price Breakdown */}
-          {formData.price && (
-            <div style={{
-              background: 'var(--blue-50)',
-              border: '1px solid var(--blue-100)',
-              borderRadius: 'var(--radius-lg)',
-              padding: 'var(--space-4)',
-              marginBottom: 'var(--space-6)',
-            }}>
-              <div className="accept-detail-row" style={{ borderColor: 'var(--blue-100)' }}>
-                <span className="accept-detail-label">Total Price</span>
-                <span className="accept-detail-value">€{parseFloat(formData.price).toFixed(2)}</span>
+          <div style={{
+            background: 'var(--blue-50)',
+            border: '1px solid var(--blue-100)',
+            borderRadius: 'var(--radius-lg)',
+            padding: 'var(--space-4)',
+            marginBottom: 'var(--space-6)',
+          }}>
+            <div className="accept-detail-row" style={{ borderColor: 'var(--blue-100)', borderBottom: '1px solid var(--blue-100)', paddingBottom: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+              <div>
+                <span className="accept-detail-label" style={{ display: 'block', color: 'var(--gray-900)' }}>Dispatch Booking Fee</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--gray-600)' }}>Paid now via card to secure a worker</span>
               </div>
-              <div className="accept-detail-row" style={{ borderColor: 'var(--blue-100)' }}>
-                <span className="accept-detail-label">Platform Fee (20%)</span>
-                <span className="accept-detail-value" style={{ color: 'var(--gray-500)' }}>
-                  €{(parseFloat(formData.price) * 0.2).toFixed(2)}
-                </span>
-              </div>
-              <div className="accept-detail-row">
-                <span className="accept-detail-label">Worker Receives (80%)</span>
-                <span className="accept-detail-value" style={{ color: 'var(--color-primary)', fontWeight: 700 }}>
-                  €{(parseFloat(formData.price) * 0.8).toFixed(2)}
-                </span>
-              </div>
+              <span className="accept-detail-value" style={{ fontSize: 'var(--fs-lg)', fontWeight: 700 }}>€19.00</span>
             </div>
-          )}
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" htmlFor="price" style={{ color: 'var(--gray-900)' }}>Estimated Labor (paid at door)</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <span style={{ fontSize: 'var(--fs-lg)', fontWeight: 600, color: 'var(--gray-600)' }}>€</span>
+                <input
+                  id="price"
+                  name="price"
+                  type="number"
+                  className="form-input"
+                  placeholder="150"
+                  min="0"
+                  max="5000"
+                  step="1"
+                  value={formData.price}
+                  onChange={handleChange}
+                  style={{ flex: 1, background: 'white' }}
+                />
+              </div>
+              <p className="form-hint" style={{ marginTop: 'var(--space-2)' }}>
+                {formData.price 
+                  ? "This is an estimate. You will pay the handworker directly for actual labor and materials upon completion."
+                  : "Use the AI button above to get an estimate based on German market rates."}
+              </p>
+            </div>
+          </div>
 
           <button
             type="submit"
@@ -404,7 +421,7 @@ export default function RequestPage() {
             {loading ? (
               <><span className="spinner"></span> Dispatching...</>
             ) : (
-              'Submit Emergency Request'
+              'Submit Request'
             )}
           </button>
         </form>

@@ -11,13 +11,20 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient();
 
-    // 1. Check if it's an admin demo account
-    if (email === 'admin@demo.com') {
+    // 1. Check if the user exists in the admins table
+    const { data: admin } = await supabase
+      .from('admins')
+      .select('id, name, email')
+      .eq('email', email)
+      .single();
+
+    if (admin) {
       return NextResponse.json({
         user: {
-          id: 'admin-123',
-          name: 'Demo Admin',
-          email,
+          id: admin.id,
+          name: admin.name,
+          email: admin.email,
+          phone: '', // Admins might not have phone numbers required
           role: 'admin',
         }
       });
@@ -26,7 +33,7 @@ export async function POST(request: NextRequest) {
     // 2. Check if the user exists in the workers table
     const { data: worker } = await supabase
       .from('workers')
-      .select('id, name, email')
+      .select('id, name, email, phone')
       .eq('email', email)
       .single();
 
@@ -36,6 +43,7 @@ export async function POST(request: NextRequest) {
           id: worker.id,
           name: worker.name,
           email: worker.email,
+          phone: worker.phone,
           role: 'worker',
         }
       });
@@ -44,7 +52,7 @@ export async function POST(request: NextRequest) {
     // 3. Check if the user exists in the customers table
     const { data: customer } = await supabase
       .from('customers')
-      .select('id, name, email')
+      .select('id, name, email, phone')
       .eq('email', email)
       .single();
 
@@ -54,6 +62,7 @@ export async function POST(request: NextRequest) {
           id: customer.id,
           name: customer.name,
           email: customer.email,
+          phone: customer.phone,
           role: 'customer',
         }
       });

@@ -175,7 +175,7 @@ export default function AcceptPage({
                 </div>
               )}
               <p style={{ marginTop: 'var(--space-6)', textAlign: 'center', fontSize: 'var(--fs-sm)', color: 'var(--gray-400)' }}>
-                Don&apos;t worry — new emergency jobs come in frequently. Stay active!
+                Don&apos;t worry — new repair jobs come in frequently. Stay active!
               </p>
             </div>
             <div className="accept-actions">
@@ -208,8 +208,8 @@ export default function AcceptPage({
                 <span className="accept-detail-value">{job?.address}</span>
               </div>
               <div className="accept-detail-row">
-                <span className="accept-detail-label">Your Payout</span>
-                <span className="accept-payout">€{Number(acceptedJobInfo.workerPayout).toFixed(2)}</span>
+                <span className="accept-detail-label">Payment</span>
+                <span className="accept-payout" style={{ fontSize: 'var(--fs-base)', color: 'var(--gray-700)' }}>Collect directly from customer</span>
               </div>
               <div style={{
                 marginTop: 'var(--space-6)',
@@ -239,7 +239,7 @@ export default function AcceptPage({
       <div className="accept-container">
         <div className="accept-card">
           <div className="accept-header">
-            <h1>Emergency Job Available</h1>
+            <h1>New Repair Job Available</h1>
             <p>Review the details and accept to get started</p>
           </div>
 
@@ -268,34 +268,7 @@ export default function AcceptPage({
                 {job?.description}
               </span>
             </div>
-            <div className="accept-detail-row">
-              <span className="accept-detail-label">Total Price</span>
-              <span className="accept-detail-value">€{Number(job?.current_price || 0).toFixed(2)}</span>
-            </div>
-            <div className="accept-detail-row">
-              <span className="accept-detail-label">Platform Fee (20%)</span>
-              <span className="accept-detail-value" style={{ color: 'var(--gray-400)' }}>
-                -€{Number(job?.platform_fee || 0).toFixed(2)}
-              </span>
-            </div>
-            <div className="accept-detail-row" style={{ borderBottom: 'none' }}>
-              <span className="accept-detail-label" style={{ fontWeight: 700 }}>Your Payout (80%)</span>
-              <span className="accept-payout">€{Number(job?.worker_payout || 0).toFixed(2)}</span>
-            </div>
 
-            {(job?.escalation_count || 0) > 0 && (
-              <div style={{
-                marginTop: 'var(--space-4)',
-                padding: 'var(--space-3)',
-                background: 'var(--color-warning-light)',
-                borderRadius: 'var(--radius-md)',
-                textAlign: 'center',
-              }}>
-                <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning-text)' }}>
-                  Price has been escalated {job?.escalation_count}x — higher payout available!
-                </p>
-              </div>
-            )}
 
             {!user || user.role !== 'worker' ? (
               <div className="form-group" style={{ marginTop: 'var(--space-6)' }}>

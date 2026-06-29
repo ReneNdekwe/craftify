@@ -49,7 +49,7 @@ class ResendProvider implements NotificationProvider {
 
   async sendEmail(to: string, subject: string, html: string): Promise<void> {
     const { data, error } = await this.resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'Craftify Emergency <noreply@craftify.app>',
+      from: process.env.RESEND_FROM_EMAIL || 'Craftify <noreply@craftify.app>',
       to: [to],
       subject,
       html,
@@ -86,6 +86,11 @@ class TwilioProvider implements NotificationProvider {
 
   async sendSMS(to: string, message: string): Promise<void> {
     const url = `https://api.twilio.com/2010-04-01/Accounts/${this.accountSid}/Messages.json`;
+    let formattedTo = to;
+    if (this.fromNumber.startsWith('whatsapp:') && !formattedTo.startsWith('whatsapp:')) {
+      formattedTo = `whatsapp:${formattedTo}`;
+    }
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -94,7 +99,7 @@ class TwilioProvider implements NotificationProvider {
       },
       body: new URLSearchParams({
         From: this.fromNumber,
-        To: to,
+        To: formattedTo,
         Body: message,
       }),
     });
@@ -120,7 +125,7 @@ function getSMSProvider(): NotificationProvider {
     return new TwilioProvider(
       process.env.TWILIO_ACCOUNT_SID,
       process.env.TWILIO_AUTH_TOKEN,
-      process.env.TWILIO_SMS_FROM || ''
+      process.env.TWILIO_WHATSAPP_FROM || process.env.TWILIO_SMS_FROM || ''
     );
   }
   return new ConsoleProvider();
@@ -174,15 +179,15 @@ export async function notifyWorkersOfJob(
   for (const worker of workers) {
     const acceptLink = `${appUrl()}/accept/${job.accept_token}`;
 
-    const subject = `🚨 Emergency ${categoryName} Job — €${job.current_price}`;
+    const subject = `🚨 New ${categoryName} Job — €${job.current_price}`;
     const emailHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #ff6b35, #f7931e); padding: 20px; border-radius: 12px 12px 0 0;">
-          <h1 style="color: white; margin: 0;">🚨 Emergency Job Available</h1>
+          <h1 style="color: white; margin: 0;">🚨 New Job Available</h1>
         </div>
         <div style="padding: 24px; background: #f9fafb; border-radius: 0 0 12px 12px;">
           <h2 style="color: #1f2937;">Hi ${worker.name},</h2>
-          <p style="color: #4b5563;">A new <strong>${categoryName}</strong> emergency job is available near you.</p>
+          <p style="color: #4b5563;">A new <strong>${categoryName}</strong> job is available near you.</p>
           <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
             <tr><td style="padding: 8px; color: #6b7280;">Category</td><td style="padding: 8px; font-weight: 600;">${categoryName}</td></tr>
             <tr><td style="padding: 8px; color: #6b7280;">Address</td><td style="padding: 8px; font-weight: 600;">${job.address}</td></tr>
@@ -192,12 +197,12 @@ export async function notifyWorkersOfJob(
           <a href="${acceptLink}" style="display: inline-block; background: #2563eb; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
             ✅ Accept This Job
           </a>
-          <p style="color: #9ca3af; margin-top: 16px; font-size: 12px;">First worker to accept wins. Price escalates every 5 minutes.</p>
+          <p style="color: #9ca3af; margin-top: 16px; font-size: 12px;">First worker to accept gets the job.</p>
         </div>
       </div>
     `;
 
-    const smsMsg = `🚨 Emergency ${categoryName} Job\n📍 ${job.address}\n💰 Payout: €${job.worker_payout}\n📝 ${job.description}\n✅ Accept: ${acceptLink}`;
+    const smsMsg = `🚨 New ${categoryName} Job\n📍 ${job.address}\n💰 Payout: €${job.worker_payout}\n📝 ${job.description}\n✅ Accept: ${acceptLink}`;
 
     // Send both notifications
     await emailProvider.sendEmail(worker.email, subject, emailHtml);
@@ -230,7 +235,7 @@ export async function notifyCustomerJobAccepted(
       </div>
       <div style="padding: 24px; background: #f9fafb; border-radius: 0 0 12px 12px;">
         <h2 style="color: #1f2937;">Hi ${customer.name},</h2>
-        <p style="color: #4b5563;">Great news! A <strong>${categoryName}</strong> has accepted your emergency request.</p>
+        <p style="color: #4b5563;">Great news! A <strong>${categoryName}</strong> has accepted your request.</p>
         <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb; margin: 16px 0;">
           <h3 style="margin: 0 0 8px 0;">Your Worker</h3>
           <p style="margin: 4px 0;"><strong>${worker.name}</strong></p>
@@ -282,12 +287,12 @@ export async function sendPaymentReceipts(
           <tr><td style="padding: 8px; color: #6b7280;">Total Paid</td><td style="padding: 8px; font-weight: 600; color: #2563eb;">€${job.current_price}</td></tr>
           <tr><td style="padding: 8px; color: #6b7280;">Payment ID</td><td style="padding: 8px; font-size: 12px;">${job.stripe_payment_intent_id || 'N/A'}</td></tr>
         </table>
-        <p style="color: #9ca3af; font-size: 12px;">Thank you for using Craftify Emergency!</p>
+        <p style="color: #9ca3af; font-size: 12px;">Thank you for using Craftify!</p>
       </div>
     </div>
   `;
 
-  const customerSMS = `🧾 Payment Receipt: ${categoryName} service by ${worker.name}. Total: €${job.current_price}. Thank you for using Craftify Emergency!`;
+  const customerSMS = `🧾 Payment Receipt: ${categoryName} service by ${worker.name}. Total: €${job.current_price}. Thank you for using Craftify!`;
 
   await emailProvider.sendEmail(customer.email, customerSubject, customerEmailHtml);
   await smsProvider.sendSMS(customer.phone, customerSMS);

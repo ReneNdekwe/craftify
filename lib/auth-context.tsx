@@ -8,6 +8,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone: string;
   role: UserRole;
 }
 
@@ -90,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: dbId,
         name,
         email,
+        phone,
         role,
       };
 

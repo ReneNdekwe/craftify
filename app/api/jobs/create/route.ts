@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { calculateFees } from '@/lib/fees';
 import { v4 as uuidv4 } from 'uuid';
+import { notifyWorkersOfJob } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,23 +102,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 4 & 5: Find workers to notify
-    // First try nearby workers by category, then fall back to ALL active workers
+    // Step 5: Find eligible workers (Send to ALL active workers to ensure notification works)
     let workersToNotify: Array<{ id: string; name: string; email: string; phone: string }> = [];
 
-    // Try nearby workers first (category + radius)
     const { data: nearbyWorkers, error: workersError } = await supabase
-      .rpc('find_nearby_workers', {
-        p_latitude: parseFloat(latitude),
-        p_longitude: parseFloat(longitude),
-        p_radius_km: 15.0,
-        p_category_id: categoryId,
-      });
+      .from('workers')
+      .select('id, name, email, phone')
+      .eq('status', 'ACTIVE');
 
     if (workersError) {
       console.error('Worker search error:', workersError);
     }
 
-    if (nearbyWorkers && nearbyWorkers.length > 0) {
+    if (nearbyWorkers) {
       workersToNotify = nearbyWorkers;
     } else {
       // Fallback: notify ALL active workers regardless of category or location
@@ -143,7 +140,23 @@ export async function POST(request: NextRequest) {
 
     const categoryName = category?.name || 'Emergency';
 
-    // Step 6: Notify workers (Delegated to n8n)
+    // Step 6: Notify workers (Native + Delegated to n8n)
+    await notifyWorkersOfJob(job, workersToNotify as any, categoryName).catch(err => console.error('Native notification failed:', err));
+
+    const webhookUrl = process.env.N8N_WEBHOOK_URL || 'https://rndekwe.app.n8n.cloud';
+    fetch(`${webhookUrl}/webhook/dispatch-job`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        job: {
+          description: job.description,
+          address: job.address,
+          worker_payout: job.worker_payout,
+          accept_token: job.accept_token,
+        },
+        workers: workersToNotify
+      })
+    }).catch(err => console.error('Failed to trigger n8n dispatch-job webhook:', err));
 
     return NextResponse.json({
       success: true,

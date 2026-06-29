@@ -1,9 +1,10 @@
 /**
  * Craftify Emergency — Stripe Client
  *
- * Stripe Connect is used for split payments:
- * - 20% platform fee (retained by Craftify)
- * - 80% transferred to worker's connected Stripe account
+ * We use Auth & Capture:
+ * - Customer authorizes €19 dispatch fee at checkout
+ * - Captured when worker accepts the job
+ * - Cancelled if no worker accepts in 20 mins
  */
 
 import Stripe from 'stripe';
@@ -25,40 +26,19 @@ export function getStripe(): Stripe {
 }
 
 /**
- * Create a PaymentIntent with application fee for Stripe Connect.
- *
- * @param amountCents - Total amount in cents
- * @param applicationFeeCents - Platform fee in cents (20%)
- * @param connectedAccountId - Worker's Stripe connected account ID
- * @param metadata - Additional metadata for the payment
+ * Capture a previously authorized PaymentIntent (e.g. the Dispatch Fee).
  */
-export async function createPaymentIntent(
-  amountCents: number,
-  applicationFeeCents: number,
-  connectedAccountId: string,
-  metadata: Record<string, string> = {}
-): Promise<Stripe.PaymentIntent> {
+export async function capturePaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
   const stripe = getStripe();
+  return stripe.paymentIntents.capture(paymentIntentId);
+}
 
-  return stripe.paymentIntents.create({
-    amount: amountCents,
-    currency: 'eur',
-    application_fee_amount: applicationFeeCents,
-    transfer_data: {
-      destination: connectedAccountId,
-    },
-    metadata: {
-      platform: 'craftify_emergency',
-      ...metadata,
-    },
-    // Auto-confirm for simplicity (in production, use client-side confirmation)
-    confirm: true,
-    payment_method: 'pm_card_visa', // Test card — remove in production
-    automatic_payment_methods: {
-      enabled: true,
-      allow_redirects: 'never',
-    },
-  });
+/**
+ * Cancel a previously authorized PaymentIntent (e.g. if no worker accepts).
+ */
+export async function cancelPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
+  const stripe = getStripe();
+  return stripe.paymentIntents.cancel(paymentIntentId);
 }
 
 /**
