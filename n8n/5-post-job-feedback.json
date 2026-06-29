@@ -1,0 +1,114 @@
+{
+  "name": "5. Post-Job Customer Feedback",
+  "nodes": [
+    {
+      "parameters": {
+        "tableName": "jobs",
+        "events": ["UPDATE"]
+      },
+      "id": "trigger-5",
+      "name": "Supabase Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.record.status}}",
+              "operation": "equal",
+              "value2": "COMPLETED"
+            }
+          ]
+        }
+      },
+      "id": "if-completed",
+      "name": "Is COMPLETED?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "hours"
+      },
+      "id": "wait-node",
+      "name": "Wait 2 Hours",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM customers WHERE id = '{{$node['Supabase Trigger'].json.record.customer_id}}'"
+      },
+      "id": "postgres-customer-3",
+      "name": "Fetch Customer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "toEmail": "={{$json.email}}",
+        "subject": "How was your experience?",
+        "html": "Please rate your worker."
+      },
+      "id": "email-survey",
+      "name": "Send Survey",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Supabase Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is COMPLETED?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is COMPLETED?": {
+      "main": [
+        [
+          {
+            "node": "Wait 2 Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2 Hours": {
+      "main": [
+        [
+          {
+            "node": "Fetch Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Customer": {
+      "main": [
+        [
+          {
+            "node": "Send Survey",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

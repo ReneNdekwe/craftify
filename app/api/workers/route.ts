@@ -44,11 +44,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, phone, categoryId, latitude, longitude, stripeAccountId } = body;
 
-    if (!name || !email || !phone || !categoryId) {
+    if (!name || !email || !phone) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const supabase = createServerClient();
+
+    let finalCategoryId = categoryId;
+    if (!finalCategoryId) {
+      const { data: cat } = await supabase.from('categories').select('id').limit(1).single();
+      finalCategoryId = cat?.id;
+    }
 
     const { data: worker, error } = await supabase
       .from('workers')
@@ -56,7 +62,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         phone,
-        category_id: categoryId,
+        category_id: finalCategoryId,
         latitude: latitude || 0,
         longitude: longitude || 0,
         stripe_account_id: stripeAccountId || null,
@@ -69,6 +75,23 @@ export async function POST(request: NextRequest) {
       console.error('Worker creation error:', error);
       return NextResponse.json({ error: 'Failed to create worker' }, { status: 500 });
     }
+
+    // Trigger n8n webhook for onboarding notifications
+    const webhookUrl = process.env.N8N_WEBHOOK_URL || 'https://rndekwe.app.n8n.cloud';
+    fetch(`${webhookUrl}/webhook/user-onboarding`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: worker.name,
+        email: worker.email,
+        phone: worker.phone,
+        role: 'worker'
+      })
+    })
+    .then(res => {
+      if (!res.ok) console.error(`n8n Webhook HTTP error: ${res.status} (Is the workflow Active?)`);
+    })
+    .catch(err => console.error('n8n Webhook failed:', err));
 
     return NextResponse.json({ success: true, worker });
   } catch (error) {

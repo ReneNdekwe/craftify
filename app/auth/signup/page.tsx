@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth, UserRole } from '@/lib/auth-context';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 
 export default function SignUpPage() {
   const { signUp } = useAuth();
@@ -9,7 +10,11 @@ export default function SignUpPage() {
   const [role, setRole] = useState<UserRole>('customer');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [address, setAddress] = useState('');
+  const [lat, setLat] = useState('');
+  const [lon, setLon] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +28,7 @@ export default function SignUpPage() {
     setLoading(true);
     setError(null);
 
-    const result = await signUp(name, email, password, role);
+    const result = await signUp(name, email, phone, password, role, lat, lon);
 
     if (result.success) {
       if (role === 'worker') {
@@ -180,6 +185,37 @@ export default function SignUpPage() {
                     autoComplete="email"
                   />
                 </div>
+
+                <div className="form-group">
+                  <label className="form-label" htmlFor="signup-phone">Phone Number</label>
+                  <input
+                    id="signup-phone"
+                    type="tel"
+                    className="form-input"
+                    placeholder="+1 (555) 000-0000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                    autoComplete="tel"
+                  />
+                </div>
+
+                {role === 'worker' && (
+                  <div className="form-group" style={{ marginBottom: 'var(--space-4)' }}>
+                    <label className="form-label">Home Address (Base Location)</label>
+                    <AddressAutocomplete
+                      value={address}
+                      onChange={(val) => setAddress(val)}
+                      onSelect={(addr, l, long) => {
+                        setAddress(addr);
+                        setLat(l);
+                        setLon(long);
+                      }}
+                      placeholder="e.g. Alexanderplatz, Berlin"
+                      required
+                    />
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label className="form-label" htmlFor="signup-password">Password</label>

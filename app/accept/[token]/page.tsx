@@ -1,7 +1,7 @@
 'use client';
 
 import { use, useState, useEffect } from 'react';
-
+import { useAuth } from '@/lib/auth-context';
 interface JobDetails {
   id: string;
   status: string;
@@ -33,9 +33,9 @@ export default function AcceptPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = use(params);
+  const { user, loading: authLoading } = useAuth();
   const [job, setJob] = useState<JobDetails | null>(null);
   const [workers, setWorkers] = useState<NearbyWorker[]>([]);
-  const [selectedWorker, setSelectedWorker] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
   const [accepted, setAccepted] = useState(false);
@@ -82,10 +82,11 @@ export default function AcceptPage({
   }
 
   async function handleAccept() {
-    if (!selectedWorker) {
-      setError('Please select a worker to accept this job.');
+    if (!user || user.role !== 'worker') {
+      setError('You must be logged in as an active worker to accept this job.');
       return;
     }
+    const workerId = user.id;
     setAccepting(true);
     setError(null);
 
@@ -93,7 +94,7 @@ export default function AcceptPage({
       const res = await fetch('/api/jobs/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ acceptToken: token, workerId: selectedWorker }),
+        body: JSON.stringify({ acceptToken: token, workerId }),
       });
       const data = await res.json();
 
@@ -117,7 +118,7 @@ export default function AcceptPage({
     }
   }
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="page-container" style={{ textAlign: 'center', paddingTop: '6rem' }}>
         <div className="spinner spinner-lg" style={{ margin: '0 auto' }}></div>
@@ -296,32 +297,47 @@ export default function AcceptPage({
               </div>
             )}
 
-            <div className="form-group" style={{ marginTop: 'var(--space-6)' }}>
-              <label className="form-label" htmlFor="worker-select">Select Worker</label>
-              <select
-                id="worker-select"
-                className="form-select"
-                value={selectedWorker}
-                onChange={(e) => setSelectedWorker(e.target.value)}
-              >
-                <option value="">Choose a worker...</option>
-                {workers.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name} — ⭐ {w.rating} ({w.jobs_completed} jobs)
-                  </option>
-                ))}
-              </select>
-              <p className="form-hint">
-                In production, this would be auto-filled from the worker&apos;s session.
-              </p>
-            </div>
+            {!user || user.role !== 'worker' ? (
+              <div className="form-group" style={{ marginTop: 'var(--space-6)' }}>
+                <div style={{
+                  padding: 'var(--space-4)',
+                  background: 'var(--color-warning-light)',
+                  borderRadius: 'var(--radius-md)',
+                  textAlign: 'center',
+                }}>
+                  <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-warning-text)', fontWeight: 600 }}>
+                    Worker Authentication Required
+                  </p>
+                  <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning-text)', marginTop: 'var(--space-2)' }}>
+                    You must be logged in as an active worker to accept this job.
+                  </p>
+                  <a href="/auth" className="btn btn-primary" style={{ marginTop: 'var(--space-4)' }}>
+                    Log In
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <div className="form-group" style={{ marginTop: 'var(--space-6)' }}>
+                <div style={{
+                  padding: 'var(--space-4)',
+                  background: 'var(--color-success-light)',
+                  borderRadius: 'var(--radius-md)',
+                  textAlign: 'center',
+                  border: '1px solid var(--color-success)'
+                }}>
+                  <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-success-text)' }}>
+                    You are logged in as <strong>{user.name}</strong>.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="accept-actions">
             <button
               className="btn btn-primary btn-xl w-full"
               onClick={handleAccept}
-              disabled={accepting || !selectedWorker}
+              disabled={accepting || !user || user.role !== 'worker'}
               id="accept-job-btn"
             >
               {accepting ? (

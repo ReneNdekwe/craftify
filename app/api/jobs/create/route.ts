@@ -14,7 +14,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { calculateFees } from '@/lib/fees';
-import { notifyWorkersOfJob } from '@/lib/notifications';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
@@ -30,6 +29,7 @@ export async function POST(request: NextRequest) {
       latitude,
       longitude,
       price,
+      severity,
     } = body;
 
     // Validate required fields
@@ -72,12 +72,16 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Create job record
     const acceptToken = uuidv4();
+    const finalDescription = severity && severity !== 'MEDIUM' 
+      ? `[SEVERITY: ${severity}] ${description}` 
+      : description;
+
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .insert({
         customer_id: customerId,
         category_id: categoryId,
-        description,
+        description: finalDescription,
         address,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
@@ -139,10 +143,7 @@ export async function POST(request: NextRequest) {
 
     const categoryName = category?.name || 'Emergency';
 
-    // Step 6: Notify workers
-    if (workersToNotify.length > 0) {
-      await notifyWorkersOfJob(job, workersToNotify as Parameters<typeof notifyWorkersOfJob>[1], categoryName);
-    }
+    // Step 6: Notify workers (Delegated to n8n)
 
     return NextResponse.json({
       success: true,

@@ -1,0 +1,131 @@
+{
+  "name": "4. Payment Processing & Receipts",
+  "nodes": [
+    {
+      "parameters": {
+        "tableName": "jobs",
+        "events": ["UPDATE"]
+      },
+      "id": "trigger-4",
+      "name": "Supabase Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.record.status}}",
+              "operation": "equal",
+              "value2": "PAID"
+            }
+          ]
+        }
+      },
+      "id": "if-paid",
+      "name": "Is PAID?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM workers WHERE id = '{{$json.record.worker_id}}'"
+      },
+      "id": "postgres-worker-2",
+      "name": "Fetch Worker",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [600, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM customers WHERE id = '{{$node['Supabase Trigger'].json.record.customer_id}}'"
+      },
+      "id": "postgres-customer-2",
+      "name": "Fetch Customer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [600, 400]
+    },
+    {
+      "parameters": {
+        "toEmail": "={{$node['Fetch Customer'].json.email}}",
+        "subject": "🧾 Payment Receipt",
+        "html": "Your payment has been processed."
+      },
+      "id": "email-customer-receipt",
+      "name": "Customer Receipt",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [800, 400]
+    },
+    {
+      "parameters": {
+        "toEmail": "={{$node['Fetch Worker'].json.email}}",
+        "subject": "💰 Payment Received",
+        "html": "You have been paid."
+      },
+      "id": "email-worker-receipt",
+      "name": "Worker Receipt",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [800, 200]
+    }
+  ],
+  "connections": {
+    "Supabase Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is PAID?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is PAID?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Worker",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Worker": {
+      "main": [
+        [
+          {
+            "node": "Worker Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Customer": {
+      "main": [
+        [
+          {
+            "node": "Customer Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

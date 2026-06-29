@@ -15,7 +15,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUp: (name: string, email: string, password: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
+  signUp: (name: string, email: string, phone: string, password: string, role: UserRole, lat?: string, lon?: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => void;
 }
 
@@ -41,58 +41,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function signIn(email: string, password: string) {
-    // Demo auth — in production this would hit Supabase Auth
-    // Check if there's a stored user with this email
     try {
-      const storedUsers = JSON.parse(localStorage.getItem('craftify_users') || '[]');
-      const found = storedUsers.find((u: User & { password: string }) => u.email === email && u.password === password);
+      const res = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (found) {
-        const userData: User = { id: found.id, name: found.name, email: found.email, role: found.role };
-        setUser(userData);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      const data = await res.json();
+
+      if (res.ok && data.user) {
+        setUser(data.user);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.user));
         return { success: true };
       }
 
-      // Fallback demo accounts
-      const demoAccounts: Record<string, { name: string; role: UserRole }> = {
-        'customer@demo.com': { name: 'Demo Customer', role: 'customer' },
-        'worker@demo.com': { name: 'Demo Worker', role: 'worker' },
-        'admin@demo.com': { name: 'Demo Admin', role: 'admin' },
-      };
-
-      if (demoAccounts[email] && password === 'demo123') {
-        const account = demoAccounts[email];
-        const userData: User = {
-          id: crypto.randomUUID(),
-          name: account.name,
-          email,
-          role: account.role,
-        };
-        setUser(userData);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-        return { success: true };
-      }
-
-      return { success: false, error: 'Invalid email or password' };
+      return { success: false, error: data.error || 'Invalid email or password' };
     } catch {
       return { success: false, error: 'Sign in failed' };
     }
   }
 
-  async function signUp(name: string, email: string, password: string, role: UserRole) {
+  async function signUp(name: string, email: string, phone: string, password: string, role: UserRole, lat?: string, lon?: string) {
     try {
+      let dbId = crypto.randomUUID();
+
+      if (role === 'worker') {
+        const res = await fetch('/api/workers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone, latitude: lat, longitude: lon }),
+        });
+        if (!res.ok) throw new Error('Worker creation failed');
+        const data = await res.json();
+        if (data.worker?.id) dbId = data.worker.id;
+      } else if (role === 'customer') {
+        const res = await fetch('/api/customers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone }),
+        });
+        if (!res.ok) throw new Error('Customer creation failed');
+        const data = await res.json();
+        if (data.customer?.id) dbId = data.customer.id;
+      }
+
       const userData: User = {
-        id: crypto.randomUUID(),
+        id: dbId,
         name,
         email,
         role,
       };
 
-      // Store in localStorage registry
-      const storedUsers = JSON.parse(localStorage.getItem('craftify_users') || '[]');
-      storedUsers.push({ ...userData, password });
-      localStorage.setItem('craftify_users', JSON.stringify(storedUsers));
+      // Removed local registry array entirely. 
+      // User is now safely persisted in the Supabase database above.
 
       // Log in immediately
       setUser(userData);

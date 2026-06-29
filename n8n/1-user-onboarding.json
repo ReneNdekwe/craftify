@@ -1,0 +1,118 @@
+{
+  "name": "1. User Onboarding (Workers & Customers)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "user-onboarding",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-onboarding",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "webhookId": "user-onboarding"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{$json.body.role}}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "customer",
+              "output": 0
+            },
+            {
+              "value2": "worker",
+              "output": 1
+            }
+          ]
+        }
+      },
+      "id": "switch-role",
+      "name": "Switch by Role",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "notifications@craftify-emergency.com",
+        "toEmail": "={{$json.body.email}}",
+        "subject": "Welcome to Craftify Emergency!",
+        "html": "=<p>Hello <b>{{$json.body.name}}</b>,</p>\n<p>Welcome to Craftify Emergency! You can now request emergency help whenever you need it.</p>"
+      },
+      "id": "smtp-customer",
+      "name": "SMTP (Customer)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [600, 100]
+    },
+    {
+      "parameters": {
+        "fromEmail": "notifications@craftify-emergency.com",
+        "toEmail": "={{$json.body.email}}",
+        "subject": "Welcome to Craftify (Worker Account)",
+        "html": "=<p>Hello <b>{{$json.body.name}}</b>,</p>\n<p>Your worker account is now active! You will receive WhatsApp and Email alerts when emergency jobs are available in your area.</p>"
+      },
+      "id": "smtp-worker",
+      "name": "SMTP (Worker)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [600, 500]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "from": "whatsapp:+14155238886",
+        "to": "=whatsapp:{{$json.body.phone}}",
+        "message": "=Hi {{$json.body.name}}! Welcome to Craftify Emergency. Your worker profile is ready. We will ping you here when a job is available! ⚡"
+      },
+      "id": "twilio-whatsapp",
+      "name": "Twilio (WhatsApp)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [600, 700]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch by Role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch by Role": {
+      "main": [
+        [
+          {
+            "node": "SMTP (Customer)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SMTP (Worker)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Twilio (WhatsApp)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

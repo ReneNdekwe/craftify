@@ -1,8 +1,18 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-First, run the development server:
+## Testing Payments (Stripe)
+
+When testing the application in development mode (using your `sk_test_...` Stripe keys), you MUST use the official Stripe Test Card. Real credit cards will be declined.
+
+**Stripe Magic Test Card:**
+- **Card Number:** `4242 4242 4242 4242`
+- **Expiration Date:** Any future date (e.g., `12 / 34`)
+- **CVC:** Any 3 digits (e.g., `123`)
+- **Zip/Postal Code:** Any digits (e.g., `12345`)
+
+## Getting StartedFirst, run the development server:
 
 ```bash
 npm run dev

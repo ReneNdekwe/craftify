@@ -1,0 +1,130 @@
+{
+  "name": "3. Customer Acceptance Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "tableName": "jobs",
+        "events": ["UPDATE"]
+      },
+      "id": "trigger-3",
+      "name": "Supabase Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.record.status}}",
+              "operation": "equal",
+              "value2": "ACCEPTED"
+            }
+          ]
+        }
+      },
+      "id": "if-accepted",
+      "name": "Is ACCEPTED?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM workers WHERE id = '{{$json.record.worker_id}}'"
+      },
+      "id": "postgres-worker",
+      "name": "Fetch Worker",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM customers WHERE id = '{{$node['Supabase Trigger'].json.record.customer_id}}'"
+      },
+      "id": "postgres-customer",
+      "name": "Fetch Customer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "to": "={{$json.phone}}",
+        "message": "✅ Help is on the way! Your worker {{$node['Fetch Worker'].json.name}} has accepted the job."
+      },
+      "id": "twilio-2",
+      "name": "Twilio (WhatsApp)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "toEmail": "={{$json.email}}",
+        "subject": "✅ Help is on the way!",
+        "html": "Your worker has accepted the job."
+      },
+      "id": "email-2",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1000, 400]
+    }
+  ],
+  "connections": {
+    "Supabase Trigger": {
+      "main": [
+        [
+          {
+            "node": "Is ACCEPTED?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is ACCEPTED?": {
+      "main": [
+        [
+          {
+            "node": "Fetch Worker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Worker": {
+      "main": [
+        [
+          {
+            "node": "Fetch Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Customer": {
+      "main": [
+        [
+          {
+            "node": "Twilio (WhatsApp)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

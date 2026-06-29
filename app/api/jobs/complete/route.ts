@@ -13,7 +13,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { createPaymentIntent, eurToCents } from '@/lib/stripe';
-import { sendPaymentReceipts } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -127,13 +126,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update job status' }, { status: 500 });
     }
 
-    // Step 5: Send payment receipts
-    await sendPaymentReceipts(
-      updatedJob,
-      customer,
-      worker,
-      category?.name || 'Emergency'
-    );
+    // Step 5: Send payment receipts (Delegated to n8n)
 
     return NextResponse.json({
       success: true,

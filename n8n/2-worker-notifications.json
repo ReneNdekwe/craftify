@@ -1,0 +1,86 @@
+{
+  "name": "2. Worker Notifications (Email Dispatch)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dispatch-job",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "402eb0af-d533-4c9f-b7a4-07f7c6e6189e",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        460
+      ],
+      "webhookId": "dispatch-job"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "body.workers",
+        "options": {}
+      },
+      "id": "7dc1a9d8-9df2-47ea-bd3b-a25e21d5aeb9",
+      "name": "Split Workers",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 3,
+      "position": [
+        680,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "dispatch@craftify-emergency.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "🚨 Craftify: Emergency Job Request!",
+        "html": "=<p>Hello <b>{{ $json.name }}</b>,</p>\n<p>A new emergency job has been requested near you.</p>\n<p><strong>Description:</strong> {{ $('Webhook').item.json.body.job.description }}</p>\n<p><strong>Address:</strong> {{ $('Webhook').item.json.body.job.address }}</p>\n<p><strong>Estimated Payout:</strong> €{{ $('Webhook').item.json.body.job.worker_payout }}</p>\n<br>\n<p><a href=\"http://localhost:3000/accept/{{ $('Webhook').item.json.body.job.accept_token }}\" style=\"padding:12px 24px; background-color:#ffcc00; color:black; text-decoration:none; font-weight:bold; border-radius:5px; display:inline-block;\">Accept Job</a></p>"
+      },
+      "id": "a92bdab3-8e94-436d-9781-6789e9d9e4a3",
+      "name": "Send Email (SMTP)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [
+        900,
+        460
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Split Workers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Workers": {
+      "main": [
+        [
+          {
+            "node": "Send Email (SMTP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f7be81f9-f304-43ea-98a7-6c827ea80f08",
+  "id": "a2c1b2f1-67b1-4c12-9844-48f1f54316b2",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

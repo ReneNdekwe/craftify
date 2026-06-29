@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const jobId = searchParams.get('id');
-    const customerEmail = searchParams.get('customerEmail');
+    const customerId = searchParams.get('customerId');
+    const workerId = searchParams.get('workerId');
 
     // Single job lookup
     if (jobId) {
@@ -39,20 +40,19 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status);
     }
 
+    if (customerId) {
+      query = query.eq('customer_id', customerId);
+    } else if (workerId) {
+      query = query.or(`status.eq.OPEN,worker_id.eq.${workerId}`);
+    }
+
     const { data: jobs, error } = await query;
 
     if (error) {
       return NextResponse.json({ error: 'Failed to fetch jobs' }, { status: 500 });
     }
 
-    let filteredJobs = jobs || [];
-    
-    // If a customer email is provided, only return their jobs
-    if (customerEmail) {
-      filteredJobs = filteredJobs.filter((job: any) => job.customers?.email === customerEmail);
-    }
-
-    return NextResponse.json({ jobs: filteredJobs });
+    return NextResponse.json({ jobs: jobs || [] });
   } catch (error) {
     console.error('Jobs API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

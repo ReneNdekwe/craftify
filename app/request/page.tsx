@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 
 interface Category {
   id: string;
@@ -25,8 +26,12 @@ export default function RequestPage() {
     address: '',
     latitude: '',
     longitude: '',
-    price: '150',
+    price: '',
+    severity: 'MEDIUM',
   });
+  
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiReasoning, setAiReasoning] = useState<{ severity: string; text: string } | null>(null);
 
   useEffect(() => {
     fetchCategories();
@@ -58,37 +63,106 @@ export default function RequestPage() {
 
   async function handleGetLocation() {
     if (navigator.geolocation) {
+      setLoading(true);
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setFormData({
-            ...formData,
-            latitude: position.coords.latitude.toString(),
-            longitude: position.coords.longitude.toString(),
-          });
+        async (position) => {
+          const lat = position.coords.latitude.toString();
+          const lon = position.coords.longitude.toString();
+          
+          try {
+            // Reverse geocode to get the address string
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const data = await res.json();
+            
+            if (data && data.display_name) {
+              setFormData({
+                ...formData,
+                address: data.display_name,
+                latitude: lat,
+                longitude: lon,
+              });
+            } else {
+              setFormData({ ...formData, latitude: lat, longitude: lon, address: 'Location found' });
+            }
+          } catch (err) {
+            console.error('Reverse geocoding error:', err);
+            setFormData({ ...formData, latitude: lat, longitude: lon, address: 'Location found' });
+          } finally {
+            setLoading(false);
+          }
         },
         () => {
-          setFormData({ ...formData, latitude: '52.3676', longitude: '4.9041' });
+          setLoading(false);
+          alert('Could not get your location. Please type your address manually.');
         }
       );
     } else {
-      setFormData({ ...formData, latitude: '52.3676', longitude: '4.9041' });
+      alert('Geolocation is not supported by your browser.');
+    }
+  }
+
+  async function handleAiAnalyze() {
+    if (!formData.description || formData.description.length < 10) {
+      setError('Please provide a bit more detail in the description first.');
+      return;
+    }
+
+    setAiAnalyzing(true);
+    setError(null);
+    setAiReasoning(null);
+
+    try {
+      const res = await fetch('/api/ai/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: formData.description }),
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.analysis) {
+        const { categoryId, severity, suggestedPrice, reasoning } = data.analysis;
+        
+        setFormData(prev => ({
+          ...prev,
+          categoryId: categoryId,
+          price: suggestedPrice.toString(),
+          severity: severity
+        }));
+        
+        setAiReasoning({ severity, text: reasoning });
+      } else {
+        setError(data.error || 'AI analysis failed.');
+      }
+    } catch (err) {
+      console.error('AI Error:', err);
+      setError('Network error during AI analysis.');
+    } finally {
+      setAiAnalyzing(false);
     }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    
+    if (!formData.latitude || !formData.longitude) {
+      setError('Please select a valid address from the dropdown suggestions so we can find your exact location.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     const submitData = {
       ...formData,
-      latitude: formData.latitude || '52.3676',
-      longitude: formData.longitude || '4.9041',
+      latitude: formData.latitude,
+      longitude: formData.longitude,
       price: parseFloat(formData.price),
+      severity: formData.severity,
     };
 
     try {
-      const res = await fetch('/api/jobs/create', {
+      const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submitData),
@@ -96,86 +170,20 @@ export default function RequestPage() {
 
       const data = await res.json();
 
-      if (data.success) {
-        setSubmitted(true);
-        setResult({
-          jobId: data.job.id,
-          workersNotified: data.workersNotified,
-          message: data.message,
-        });
+      if (data.url) {
+        window.location.href = data.url;
       } else {
-        setError(data.error || 'Failed to submit request');
+        setError(data.error || 'Failed to initialize payment');
+        setLoading(false);
       }
     } catch (err) {
       console.error('Submit error:', err);
       setError('Network error. Please try again.');
-    } finally {
       setLoading(false);
     }
   }
 
-  // Success state
-  if (submitted && result) {
-    return (
-      <div className="page-container">
-        <div className="accept-container">
-          <div className="accept-card">
-            <div className="accept-header" style={{ background: 'linear-gradient(135deg, #059669, #10b981)' }}>
-              <h1>Request Submitted</h1>
-              <p>Your emergency request has been dispatched</p>
-            </div>
-            <div className="accept-body">
-              <div className="accept-detail-row">
-                <span className="accept-detail-label">Job ID</span>
-                <span className="accept-detail-value font-mono" style={{ fontSize: 'var(--fs-xs)' }}>
-                  {result.jobId.substring(0, 8)}...
-                </span>
-              </div>
-              <div className="accept-detail-row">
-                <span className="accept-detail-label">Workers Notified</span>
-                <span className="accept-detail-value">{result.workersNotified}</span>
-              </div>
-              <div className="accept-detail-row">
-                <span className="accept-detail-label">Status</span>
-                <span className="badge badge-open">OPEN</span>
-              </div>
-              <p style={{ marginTop: 'var(--space-4)', fontSize: 'var(--fs-sm)', color: 'var(--gray-500)' }}>
-                {result.message}
-              </p>
-              <p style={{ marginTop: 'var(--space-2)', fontSize: 'var(--fs-xs)', color: 'var(--gray-400)' }}>
-                If no worker accepts within 5 minutes, the price will automatically increase by €75 to attract more workers.
-              </p>
-            </div>
-            <div className="accept-actions" style={{ display: 'flex', gap: 'var(--space-4)' }}>
-              <a href={`/job/${result.jobId}`} className="btn btn-primary w-full" style={{ textAlign: 'center' }}>
-                Track Job Status
-              </a>
-              <button
-                className="btn btn-ghost w-full"
-                onClick={() => {
-                  setSubmitted(false);
-                  setResult(null);
-                  setFormData({
-                    customerName: formData.customerName,
-                    customerEmail: formData.customerEmail,
-                    customerPhone: formData.customerPhone,
-                    categoryId: '',
-                    description: '',
-                    address: '',
-                    latitude: formData.latitude,
-                    longitude: formData.longitude,
-                    price: '150',
-                  });
-                }}
-              >
-                New Request
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // We removed the success state here because Stripe redirects to /request/success 
 
   return (
     <div className="page-container">
@@ -246,6 +254,52 @@ export default function RequestPage() {
           <h3 className="mb-4 mt-6" style={{ fontSize: 'var(--fs-lg)' }}>Emergency Details</h3>
 
           <div className="form-group">
+            <label className="form-label" htmlFor="description">What&apos;s the emergency?</label>
+            <textarea
+              id="description"
+              name="description"
+              className="form-textarea"
+              placeholder="e.g., My basement is flooding and water is everywhere!"
+              value={formData.description}
+              onChange={handleChange}
+              required
+              rows={4}
+            />
+            
+            <button
+              type="button"
+              className="btn btn-outline-primary mt-2 w-full"
+              onClick={handleAiAnalyze}
+              disabled={aiAnalyzing}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: 'linear-gradient(to right, rgba(59,130,246,0.1), rgba(168,85,247,0.1))', borderColor: 'var(--blue-200)' }}
+            >
+              {aiAnalyzing ? (
+                <><span className="spinner"></span> Analyzing...</>
+              ) : (
+                <>✨ Analyze with AI (Auto-fill Category & Price)</>
+              )}
+            </button>
+          </div>
+
+          {aiReasoning && (
+            <div style={{
+              background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+              border: '1px solid #bbf7d0',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-4)',
+              marginBottom: 'var(--space-4)',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+                <strong>AI Analysis Complete</strong>
+                <span className={`badge ${aiReasoning.severity === 'CRITICAL' || aiReasoning.severity === 'HIGH' ? 'badge-cancelled' : 'badge-open'}`}>
+                  {aiReasoning.severity} SEVERITY
+                </span>
+              </div>
+              <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--gray-800)' }}>{aiReasoning.text}</p>
+            </div>
+          )}
+
+          <div className="form-group">
             <label className="form-label" htmlFor="categoryId">Category</label>
             <select
               id="categoryId"
@@ -264,29 +318,20 @@ export default function RequestPage() {
             </select>
           </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="description">What&apos;s the emergency?</label>
-            <textarea
-              id="description"
-              name="description"
-              className="form-textarea"
-              placeholder="Describe your emergency in detail..."
-              value={formData.description}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="address">Address</label>
-            <input
-              id="address"
-              name="address"
-              type="text"
-              className="form-input"
-              placeholder="123 Main Street, Amsterdam"
+          <div className="form-group" style={{ marginBottom: 'var(--space-2)' }}>
+            <label className="form-label">Address</label>
+            <AddressAutocomplete
               value={formData.address}
-              onChange={handleChange}
+              onChange={(val) => setFormData(prev => ({ ...prev, address: val }))}
+              onSelect={(address, lat, lon) => {
+                setFormData(prev => ({
+                  ...prev,
+                  address,
+                  latitude: lat,
+                  longitude: lon
+                }));
+              }}
+              placeholder="123 Main Street, Amsterdam"
               required
             />
             <button
@@ -311,8 +356,8 @@ export default function RequestPage() {
               className="form-input"
               placeholder="150"
               min="50"
-              max="900"
-              step="25"
+              max="2000"
+              step="0.01"
               value={formData.price}
               onChange={handleChange}
               required

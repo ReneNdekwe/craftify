@@ -4,7 +4,7 @@
  * Modular notification service with pluggable providers:
  * - ConsoleProvider: Logs to console (dev/testing)
  * - ResendProvider: Real email via Resend API
- * - TwilioProvider: Real WhatsApp via Twilio API
+ * - TwilioProvider: Real SMS via Twilio API
  *
  * Automatically selects the right provider based on environment variables.
  */
@@ -16,7 +16,7 @@ import { Resend } from 'resend';
 
 interface NotificationProvider {
   sendEmail(to: string, subject: string, html: string): Promise<void>;
-  sendWhatsApp(to: string, message: string): Promise<void>;
+  sendSMS(to: string, message: string): Promise<void>;
 }
 
 // ── Console Provider (Default/Dev) ──────────────────────────
@@ -30,8 +30,8 @@ class ConsoleProvider implements NotificationProvider {
     console.log('');
   }
 
-  async sendWhatsApp(to: string, message: string): Promise<void> {
-    console.log(`\n💬 WHATSAPP NOTIFICATION`);
+  async sendSMS(to: string, message: string): Promise<void> {
+    console.log(`\n📱 SMS NOTIFICATION`);
     console.log(`   To: ${to}`);
     console.log(`   Message: ${message.substring(0, 200)}...`);
     console.log('');
@@ -60,9 +60,9 @@ class ResendProvider implements NotificationProvider {
     }
   }
 
-  async sendWhatsApp(to: string, message: string): Promise<void> {
-    // Resend doesn't support WhatsApp — fall back to console
-    console.log(`💬 WhatsApp (via Resend fallback): ${to} — ${message.substring(0, 100)}`);
+  async sendSMS(to: string, message: string): Promise<void> {
+    // Resend doesn't support SMS — fall back to console
+    console.log(`📱 SMS (via Resend fallback): ${to} — ${message.substring(0, 100)}`);
   }
 }
 
@@ -84,7 +84,7 @@ class TwilioProvider implements NotificationProvider {
     console.log(`📧 Email (via Twilio fallback): ${to} — ${subject}`);
   }
 
-  async sendWhatsApp(to: string, message: string): Promise<void> {
+  async sendSMS(to: string, message: string): Promise<void> {
     const url = `https://api.twilio.com/2010-04-01/Accounts/${this.accountSid}/Messages.json`;
     const response = await fetch(url, {
       method: 'POST',
@@ -94,14 +94,14 @@ class TwilioProvider implements NotificationProvider {
       },
       body: new URLSearchParams({
         From: this.fromNumber,
-        To: `whatsapp:${to}`,
+        To: to,
         Body: message,
       }),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error(`Twilio API error: ${error}`);
+      console.error(`Twilio SMS error: ${error}`);
     }
   }
 }
@@ -115,12 +115,12 @@ function getEmailProvider(): NotificationProvider {
   return new ConsoleProvider();
 }
 
-function getWhatsAppProvider(): NotificationProvider {
+function getSMSProvider(): NotificationProvider {
   if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
     return new TwilioProvider(
       process.env.TWILIO_ACCOUNT_SID,
       process.env.TWILIO_AUTH_TOKEN,
-      process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886'
+      process.env.TWILIO_SMS_FROM || ''
     );
   }
   return new ConsoleProvider();
@@ -135,7 +135,7 @@ const appUrl = () => process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
  */
 async function logNotification(
   jobId: string,
-  channel: 'email' | 'whatsapp',
+  channel: 'email' | 'sms',
   notificationType: string,
   workerId?: string,
   customerId?: string,
@@ -169,7 +169,7 @@ export async function notifyWorkersOfJob(
   categoryName: string
 ): Promise<void> {
   const emailProvider = getEmailProvider();
-  const whatsAppProvider = getWhatsAppProvider();
+  const smsProvider = getSMSProvider();
 
   for (const worker of workers) {
     const acceptLink = `${appUrl()}/accept/${job.accept_token}`;
@@ -197,15 +197,15 @@ export async function notifyWorkersOfJob(
       </div>
     `;
 
-    const whatsAppMsg = `🚨 *Emergency ${categoryName} Job*\n\n📍 ${job.address}\n💰 Your Payout: €${job.worker_payout}\n📝 ${job.description}\n\n✅ Accept now: ${acceptLink}\n\n⏰ First to accept wins!`;
+    const smsMsg = `🚨 Emergency ${categoryName} Job\n📍 ${job.address}\n💰 Payout: €${job.worker_payout}\n📝 ${job.description}\n✅ Accept: ${acceptLink}`;
 
     // Send both notifications
     await emailProvider.sendEmail(worker.email, subject, emailHtml);
-    await whatsAppProvider.sendWhatsApp(worker.phone, whatsAppMsg);
+    await smsProvider.sendSMS(worker.phone, smsMsg);
 
     // Log notifications
     await logNotification(job.id, 'email', 'dispatch', worker.id, undefined, worker.email, undefined, subject);
-    await logNotification(job.id, 'whatsapp', 'dispatch', worker.id, undefined, undefined, worker.phone, whatsAppMsg.substring(0, 200));
+    await logNotification(job.id, 'sms', 'dispatch', worker.id, undefined, undefined, worker.phone, smsMsg.substring(0, 200));
   }
 }
 
@@ -219,7 +219,7 @@ export async function notifyCustomerJobAccepted(
   categoryName: string
 ): Promise<void> {
   const emailProvider = getEmailProvider();
-  const whatsAppProvider = getWhatsAppProvider();
+  const smsProvider = getSMSProvider();
   const jobLink = `${appUrl()}/job/${job.id}`;
 
   const subject = `✅ Your ${categoryName} request has been accepted!`;
@@ -245,13 +245,13 @@ export async function notifyCustomerJobAccepted(
     </div>
   `;
 
-  const whatsAppMsg = `✅ *Help is on the way!*\n\nYour ${categoryName} request has been accepted by *${worker.name}*.\n\n📱 Contact: ${worker.phone}\n📧 Email: ${worker.email}\n\n🔗 Track: ${jobLink}`;
+  const smsMsg = `✅ Help is on the way! Your ${categoryName} request was accepted by ${worker.name}. Contact: ${worker.phone}. Track: ${jobLink}`;
 
   await emailProvider.sendEmail(customer.email, subject, emailHtml);
-  await whatsAppProvider.sendWhatsApp(customer.phone, whatsAppMsg);
+  await smsProvider.sendSMS(customer.phone, smsMsg);
 
   await logNotification(job.id, 'email', 'accepted', undefined, customer.id, customer.email, undefined, subject);
-  await logNotification(job.id, 'whatsapp', 'accepted', undefined, customer.id, undefined, customer.phone, whatsAppMsg.substring(0, 200));
+  await logNotification(job.id, 'sms', 'accepted', undefined, customer.id, undefined, customer.phone, smsMsg.substring(0, 200));
 }
 
 /**
@@ -264,7 +264,7 @@ export async function sendPaymentReceipts(
   categoryName: string
 ): Promise<void> {
   const emailProvider = getEmailProvider();
-  const whatsAppProvider = getWhatsAppProvider();
+  const smsProvider = getSMSProvider();
 
   // Customer receipt
   const customerSubject = `🧾 Payment Receipt — ${categoryName} Service`;
@@ -287,13 +287,13 @@ export async function sendPaymentReceipts(
     </div>
   `;
 
-  const customerWhatsApp = `🧾 *Payment Receipt*\n\n${categoryName} service by ${worker.name}\n💰 Total: €${job.current_price}\n\nThank you for using Craftify Emergency!`;
+  const customerSMS = `🧾 Payment Receipt: ${categoryName} service by ${worker.name}. Total: €${job.current_price}. Thank you for using Craftify Emergency!`;
 
   await emailProvider.sendEmail(customer.email, customerSubject, customerEmailHtml);
-  await whatsAppProvider.sendWhatsApp(customer.phone, customerWhatsApp);
+  await smsProvider.sendSMS(customer.phone, customerSMS);
 
   await logNotification(job.id, 'email', 'receipt', undefined, customer.id, customer.email, undefined, customerSubject);
-  await logNotification(job.id, 'whatsapp', 'receipt', undefined, customer.id, undefined, customer.phone, customerWhatsApp.substring(0, 200));
+  await logNotification(job.id, 'sms', 'receipt', undefined, customer.id, undefined, customer.phone, customerSMS.substring(0, 200));
 
   // Worker receipt
   const workerSubject = `💰 Payment Received — €${job.worker_payout}`;
@@ -315,11 +315,11 @@ export async function sendPaymentReceipts(
     </div>
   `;
 
-  const workerWhatsApp = `💰 *You Got Paid!*\n\n${categoryName} job completed.\n💰 Your Payout: €${job.worker_payout}\n\nFunds will arrive in your Stripe account shortly.`;
+  const workerSMS = `💰 You Got Paid! ${categoryName} job completed. Your Payout: €${job.worker_payout}. Funds will arrive in your Stripe account shortly.`;
 
   await emailProvider.sendEmail(worker.email, workerSubject, workerEmailHtml);
-  await whatsAppProvider.sendWhatsApp(worker.phone, workerWhatsApp);
+  await smsProvider.sendSMS(worker.phone, workerSMS);
 
   await logNotification(job.id, 'email', 'receipt', worker.id, undefined, worker.email, undefined, workerSubject);
-  await logNotification(job.id, 'whatsapp', 'receipt', worker.id, undefined, undefined, worker.phone, workerWhatsApp.substring(0, 200));
+  await logNotification(job.id, 'sms', 'receipt', worker.id, undefined, undefined, worker.phone, workerSMS.substring(0, 200));
 }

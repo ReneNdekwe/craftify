@@ -14,7 +14,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import { notifyCustomerJobAccepted } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -105,15 +104,7 @@ export async function POST(request: NextRequest) {
       .eq('id', job.category_id)
       .single();
 
-    // Step 5: Notify customer with worker details
-    if (customer) {
-      await notifyCustomerJobAccepted(
-        updatedJob,
-        customer,
-        worker,
-        category?.name || 'Emergency'
-      );
-    }
+    // Step 5: Notify customer with worker details (Delegated to n8n)
 
     // Update worker stats
     await supabase

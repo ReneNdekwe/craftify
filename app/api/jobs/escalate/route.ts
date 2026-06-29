@@ -16,7 +16,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { calculateFees, escalatePrice, canEscalate } from '@/lib/fees';
-import { notifyWorkersOfJob } from '@/lib/notifications';
 
 export async function POST(request: NextRequest) {
   try {
@@ -96,9 +95,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       const notifiedWorkers = workers || [];
-      if (notifiedWorkers.length > 0) {
-        await notifyWorkersOfJob(updatedJob, notifiedWorkers, category?.name || 'Emergency');
-      }
+      // (Notifications delegated to n8n)
 
       escalatedCount++;
       results.push({

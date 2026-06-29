@@ -35,6 +35,35 @@ const EMPTY_FORM = {
   stripeAccountId: '',
 };
 
+function getInitials(name: string) {
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function getAvatarClass(categoryName: string | undefined) {
+  if (!categoryName) return 'dash-worker-avatar--default';
+  const lower = categoryName.toLowerCase();
+  if (lower.includes('plumb')) return 'dash-worker-avatar--plumber';
+  if (lower.includes('electr')) return 'dash-worker-avatar--electrician';
+  if (lower.includes('lock')) return 'dash-worker-avatar--locksmith';
+  if (lower.includes('hvac') || lower.includes('heat') || lower.includes('cool')) return 'dash-worker-avatar--hvac';
+  return 'dash-worker-avatar--default';
+}
+
+function StarRating({ rating }: { rating: number }) {
+  const stars = [];
+  const rounded = Math.round(Number(rating) * 2) / 2; // round to nearest 0.5
+  for (let i = 1; i <= 5; i++) {
+    if (i <= rounded) {
+      stars.push(<span key={i} className="dash-star dash-star--filled">★</span>);
+    } else if (i - 0.5 === rounded) {
+      stars.push(<span key={i} className="dash-star dash-star--half">★</span>);
+    } else {
+      stars.push(<span key={i} className="dash-star">★</span>);
+    }
+  }
+  return <span className="dash-stars">{stars}</span>;
+}
+
 export default function WorkersPage() {
   const { user, loading: authLoading } = useAuth();
   const [workers, setWorkers] = useState<Worker[]>([]);
@@ -202,249 +231,260 @@ export default function WorkersPage() {
 
   if (loading || authLoading || user?.role !== 'admin') {
     return (
-      <div className="page-container" style={{ textAlign: 'center', paddingTop: '6rem' }}>
-        <div className="spinner spinner-lg" style={{ margin: '0 auto' }}></div>
-        <p className="mt-4" style={{ color: 'var(--gray-400)' }}>
-          {authLoading ? 'Verifying access...' : 'Loading workers...'}
-        </p>
+      <div className="dash-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="spinner spinner-lg" style={{ margin: '0 auto' }}></div>
+          <p style={{ color: 'var(--gray-400)', marginTop: 'var(--space-4)', fontSize: 'var(--fs-sm)' }}>
+            {authLoading ? 'Verifying access...' : 'Loading workers...'}
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="page-container-wide">
-      {toast && (
-        <div className={`toast toast-${toast.type}`}>{toast.message}</div>
-      )}
+    <div className="dash-page">
+      <div className="dash-page-inner">
+        {toast && (
+          <div className={`toast toast-${toast.type}`}>{toast.message}</div>
+        )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 style={{ fontSize: 'var(--fs-3xl)' }}>Worker Management</h1>
-          <p style={{ fontSize: 'var(--fs-sm)', marginTop: 'var(--space-1)' }}>
-            Manage your team of emergency service professionals
-          </p>
-        </div>
-        <button className="btn btn-primary btn-lg" onClick={openCreateModal} id="add-worker-btn">
-          + Add Worker
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid-4 mb-8">
-        <div className="card-stat">
-          <div className="stat-value">{workers.length}</div>
-          <div className="stat-label">Total Workers</div>
-        </div>
-        <div className="card-stat">
-          <div className="stat-value" style={{ color: 'var(--color-success)' }}>{activeCount}</div>
-          <div className="stat-label">Active</div>
-        </div>
-        <div className="card-stat">
-          <div className="stat-value" style={{ color: 'var(--blue-500)' }}>⭐ {avgRating}</div>
-          <div className="stat-label">Avg Rating</div>
-        </div>
-        <div className="card-stat">
-          <div className="stat-value" style={{ color: 'var(--blue-600)' }}>{totalCompleted}</div>
-          <div className="stat-label">Jobs Completed</div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-4 mb-6" style={{ flexWrap: 'wrap' }}>
-        <div className="flex gap-2">
-          {['', 'ACTIVE', 'INACTIVE'].map((status) => (
-            <button
-              key={status}
-              className={`btn ${statusFilter === status ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setStatusFilter(status)}
-            >
-              {status === '' ? 'All' : status === 'ACTIVE' ? 'Active' : 'Inactive'}
+        {/* Header */}
+        <div className="dash-header">
+          <div className="dash-header-top">
+            <div>
+              <p className="dash-greeting">Workforce Management</p>
+              <h1 className="dash-title">Worker Management</h1>
+              <p className="dash-subtitle">Manage your team of emergency service professionals</p>
+            </div>
+            <button className="dash-btn-accent" onClick={openCreateModal} id="add-worker-btn">
+              + Add Worker
             </button>
-          ))}
+          </div>
         </div>
-        <select
-          className="form-select"
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          style={{ maxWidth: '250px' }}
-        >
-          <option value="">All Categories</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-          ))}
-        </select>
-      </div>
 
-      {/* Workers Grid */}
-      {workers.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">👷</div>
-          <h3>No workers found</h3>
-          <p>
-            {statusFilter || categoryFilter
-              ? 'No workers match the current filters.'
-              : 'Get started by adding your first worker.'}
-          </p>
-          {!statusFilter && !categoryFilter && (
-            <button className="btn btn-primary mt-6" onClick={openCreateModal}>
-              + Add Your First Worker
-            </button>
-          )}
+        {/* Stats */}
+        <div className="dash-stats">
+          <div className="dash-stat dash-stat--blue">
+            <div className="dash-stat-header">
+              <div className="dash-stat-icon">👷</div>
+            </div>
+            <div className="dash-stat-value">{workers.length}</div>
+            <div className="dash-stat-label">Total Workers</div>
+          </div>
+          <div className="dash-stat dash-stat--emerald">
+            <div className="dash-stat-header">
+              <div className="dash-stat-icon">✅</div>
+            </div>
+            <div className="dash-stat-value">{activeCount}</div>
+            <div className="dash-stat-label">Active</div>
+          </div>
+          <div className="dash-stat dash-stat--amber">
+            <div className="dash-stat-header">
+              <div className="dash-stat-icon">⭐</div>
+            </div>
+            <div className="dash-stat-value">{avgRating}</div>
+            <div className="dash-stat-label">Avg Rating</div>
+          </div>
+          <div className="dash-stat dash-stat--indigo">
+            <div className="dash-stat-header">
+              <div className="dash-stat-icon">🏆</div>
+            </div>
+            <div className="dash-stat-value">{totalCompleted}</div>
+            <div className="dash-stat-label">Jobs Completed</div>
+          </div>
         </div>
-      ) : (
-        <div className="grid-3">
-          {workers.map((worker) => (
-            <div key={worker.id} className="card" style={{ cursor: 'default' }}>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: 'var(--radius-md)',
-                    background: worker.status === 'ACTIVE' ? 'var(--blue-50)' : 'var(--gray-100)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.1rem',
-                  }}>
-                    {worker.categories?.icon || '🛠️'}
+
+        {/* Filters */}
+        <div style={{ display: 'flex', gap: 'var(--space-4)', marginBottom: 'var(--space-6)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="dash-tabs">
+            {['', 'ACTIVE', 'INACTIVE'].map((status) => (
+              <button
+                key={status}
+                className={`dash-tab ${statusFilter === status ? 'dash-tab--active' : ''}`}
+                onClick={() => setStatusFilter(status)}
+              >
+                {status === '' ? 'All' : status === 'ACTIVE' ? 'Active' : 'Inactive'}
+              </button>
+            ))}
+          </div>
+          <select
+            className="form-select"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            style={{ maxWidth: '250px' }}
+          >
+            <option value="">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Workers Grid */}
+        {workers.length === 0 ? (
+          <div className="dash-empty">
+            <div className="dash-empty-icon">👷</div>
+            <h3>No workers found</h3>
+            <p>
+              {statusFilter || categoryFilter
+                ? 'No workers match the current filters.'
+                : 'Get started by adding your first worker.'}
+            </p>
+            {!statusFilter && !categoryFilter && (
+              <button className="dash-btn-accent mt-6" onClick={openCreateModal}>
+                + Add Your First Worker
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="dash-workers-grid">
+            {workers.map((worker, idx) => (
+              <div
+                key={worker.id}
+                className="dash-worker-card"
+                style={{ animationDelay: `${idx * 60}ms` }}
+              >
+                <div className="dash-worker-header">
+                  <div className={`dash-worker-avatar ${getAvatarClass(worker.categories?.name)}`}>
+                    {getInitials(worker.name)}
                   </div>
-                  <div>
-                    <h4 style={{ fontSize: 'var(--fs-base)', marginBottom: '2px' }}>{worker.name}</h4>
-                    <span className={`badge badge-${worker.status.toLowerCase()}`}>
-                      {worker.status}
+                  <div className="dash-worker-info">
+                    <div className="dash-worker-name">{worker.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      <span className="dash-worker-category">
+                        {worker.categories?.icon} {worker.categories?.name || 'Uncategorized'}
+                      </span>
+                      <span className={`dash-badge dash-badge--${worker.status.toLowerCase()}`}>
+                        {worker.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="dash-worker-details">
+                  <div className="dash-worker-detail">
+                    <span className="dash-worker-detail-icon">📧</span>
+                    <span className="dash-worker-detail-text">{worker.email}</span>
+                  </div>
+                  <div className="dash-worker-detail">
+                    <span className="dash-worker-detail-icon">📱</span>
+                    <span className="dash-worker-detail-text">{worker.phone}</span>
+                  </div>
+                  <div className="dash-worker-detail">
+                    <span className="dash-worker-detail-icon">⭐</span>
+                    <span style={{ display: 'flex', alignItems: 'center' }}>
+                      <StarRating rating={worker.rating} />
+                      <span className="dash-worker-rating-text">
+                        {Number(worker.rating).toFixed(1)} · {worker.jobs_completed} jobs
+                      </span>
+                    </span>
+                  </div>
+                  <div className="dash-worker-detail">
+                    <span className="dash-worker-detail-icon">📍</span>
+                    <span className="font-mono" style={{ fontSize: 'var(--fs-xs)' }}>
+                      {worker.latitude.toFixed(3)}, {worker.longitude.toFixed(3)}
                     </span>
                   </div>
                 </div>
-              </div>
 
-              <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--gray-500)' }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span style={{ width: '16px', textAlign: 'center' }}>📧</span>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{worker.email}</span>
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span style={{ width: '16px', textAlign: 'center' }}>📱</span>
-                  <span>{worker.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span style={{ width: '16px', textAlign: 'center' }}>🏷️</span>
-                  <span>{worker.categories?.name || 'Uncategorized'}</span>
-                </div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span style={{ width: '16px', textAlign: 'center' }}>⭐</span>
-                  <span>{Number(worker.rating).toFixed(1)}/5 · {worker.jobs_completed} jobs</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span style={{ width: '16px', textAlign: 'center' }}>📍</span>
-                  <span className="font-mono" style={{ fontSize: 'var(--fs-xs)' }}>
-                    {worker.latitude.toFixed(3)}, {worker.longitude.toFixed(3)}
-                  </span>
+                <div className="dash-worker-actions">
+                  <button
+                    className="dash-worker-action"
+                    onClick={() => openEditModal(worker)}
+                  >
+                    ✏️ Edit
+                  </button>
+                  <button
+                    className={`dash-worker-action ${worker.status === 'ACTIVE' ? 'dash-worker-action--danger' : 'dash-worker-action--primary'}`}
+                    onClick={() => toggleWorkerStatus(worker)}
+                  >
+                    {worker.status === 'ACTIVE' ? '⏸ Deactivate' : '▶ Activate'}
+                  </button>
                 </div>
               </div>
-
-              <div className="flex gap-2 mt-4" style={{ borderTop: '1px solid var(--gray-100)', paddingTop: 'var(--space-4)' }}>
-                <button
-                  className="btn btn-ghost"
-                  style={{ flex: 1, fontSize: 'var(--fs-xs)' }}
-                  onClick={() => openEditModal(worker)}
-                >
-                  Edit
-                </button>
-                <button
-                  className={`btn ${worker.status === 'ACTIVE' ? 'btn-ghost' : 'btn-primary'}`}
-                  style={{ flex: 1, fontSize: 'var(--fs-xs)' }}
-                  onClick={() => toggleWorkerStatus(worker)}
-                >
-                  {worker.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editingWorker ? 'Edit Worker' : 'Add Worker'}</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>×</button>
-            </div>
-
-            <form onSubmit={handleSave}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="modal-name">Full Name</label>
-                <input id="modal-name" name="name" type="text" className="form-input" placeholder="John Smith" value={formData.name} onChange={handleChange} required />
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="modal-email">Email</label>
-                  <input id="modal-email" name="email" type="email" className="form-input" placeholder="john@example.com" value={formData.email} onChange={handleChange} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="modal-phone">Phone</label>
-                  <input id="modal-phone" name="phone" type="tel" className="form-input" placeholder="+31 6 12345678" value={formData.phone} onChange={handleChange} required />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="modal-category">Category</label>
-                <select id="modal-category" name="categoryId" className="form-select" value={formData.categoryId} onChange={handleChange} required>
-                  <option value="">Select category...</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="modal-lat">Latitude</label>
-                  <input id="modal-lat" name="latitude" type="number" step="0.0001" className="form-input" value={formData.latitude} onChange={handleChange} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="modal-lng">Longitude</label>
-                  <input id="modal-lng" name="longitude" type="number" step="0.0001" className="form-input" value={formData.longitude} onChange={handleChange} required />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="modal-stripe">Stripe Account ID</label>
-                <input id="modal-stripe" name="stripeAccountId" type="text" className="form-input" placeholder="acct_xxxxxxxxxxxx (optional)" value={formData.stripeAccountId} onChange={handleChange} />
-                <p className="form-hint">Required for receiving payments via Stripe Connect.</p>
-              </div>
-
-              <div className="flex gap-4 mt-6">
-                <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={saving} id="save-worker-btn">
-                  {saving ? (
-                    <><span className="spinner"></span> Saving...</>
-                  ) : (
-                    editingWorker ? 'Update Worker' : 'Add Worker'
-                  )}
-                </button>
-              </div>
-            </form>
+            ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Footer */}
-      <div style={{
-        marginTop: 'var(--space-8)',
-        padding: 'var(--space-4)',
-        borderTop: '1px solid var(--color-border)',
-        textAlign: 'center',
-      }}>
-        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--gray-400)' }}>
-          {workers.length} worker{workers.length !== 1 ? 's' : ''} total · {activeCount} active · {inactiveCount} inactive
-        </p>
+        {/* Modal */}
+        {showModal && (
+          <div className="dash-modal-overlay" onClick={() => setShowModal(false)}>
+            <div className="dash-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="dash-modal-header">
+                <h2>{editingWorker ? '✏️ Edit Worker' : '➕ Add Worker'}</h2>
+                <button className="dash-modal-close" onClick={() => setShowModal(false)}>×</button>
+              </div>
+
+              <div className="dash-modal-body">
+                <form onSubmit={handleSave}>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="modal-name">Full Name</label>
+                    <input id="modal-name" name="name" type="text" className="form-input" placeholder="John Smith" value={formData.name} onChange={handleChange} required />
+                  </div>
+
+                  <div className="grid-2">
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="modal-email">Email</label>
+                      <input id="modal-email" name="email" type="email" className="form-input" placeholder="john@example.com" value={formData.email} onChange={handleChange} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="modal-phone">Phone</label>
+                      <input id="modal-phone" name="phone" type="tel" className="form-input" placeholder="+31 6 12345678" value={formData.phone} onChange={handleChange} required />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="modal-category">Category</label>
+                    <select id="modal-category" name="categoryId" className="form-select" value={formData.categoryId} onChange={handleChange} required>
+                      <option value="">Select category...</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid-2">
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="modal-lat">Latitude</label>
+                      <input id="modal-lat" name="latitude" type="number" step="0.0001" className="form-input" value={formData.latitude} onChange={handleChange} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="modal-lng">Longitude</label>
+                      <input id="modal-lng" name="longitude" type="number" step="0.0001" className="form-input" value={formData.longitude} onChange={handleChange} required />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="modal-stripe">Stripe Account ID</label>
+                    <input id="modal-stripe" name="stripeAccountId" type="text" className="form-input" placeholder="acct_xxxxxxxxxxxx (optional)" value={formData.stripeAccountId} onChange={handleChange} />
+                    <p className="form-hint">Required for receiving payments via Stripe Connect.</p>
+                  </div>
+
+                  <div className="flex gap-4 mt-6">
+                    <button type="button" className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowModal(false)}>
+                      Cancel
+                    </button>
+                    <button type="submit" className="dash-btn-accent" style={{ flex: 2 }} disabled={saving} id="save-worker-btn">
+                      {saving ? (
+                        <><span className="spinner"></span> Saving...</>
+                      ) : (
+                        editingWorker ? 'Update Worker' : 'Add Worker'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="dash-footer-bar">
+          <p>
+            {workers.length} worker{workers.length !== 1 ? 's' : ''} total · {activeCount} active · {inactiveCount} inactive
+          </p>
+        </div>
       </div>
     </div>
   );
